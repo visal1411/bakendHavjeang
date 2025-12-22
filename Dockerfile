@@ -14,5 +14,6 @@ COPY . .
 # Expose port
 EXPOSE 5000
 
-# Start the app (will generate Prisma client first)
-CMD ["npx prisma generate && npm run dev"]
+# Generate Prisma client and start app
+# Use shell form instead of JSON array
+CMD sh -c "npx prisma generate && npm run dev"
