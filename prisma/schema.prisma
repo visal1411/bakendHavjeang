@@ -17,13 +17,10 @@ generator client {
 model User {
   id               Int              @id @default(autoincrement())
   name             String           @db.VarChar(100)
-  phone            String           @db.VarChar(20)
-  email            String           @unique @db.VarChar(100)
+  phone String @unique @db.VarChar(20)
   password         String           @db.VarChar(255)
   created_at       DateTime         @default(now())
   usertype         UserType
-  resetToken       String?
-  resetTokenExpire DateTime?
 
   services         Service[]
   serviceRequests  ServiceRequest[]

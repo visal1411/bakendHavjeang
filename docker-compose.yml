@@ -10,7 +10,8 @@ services:
       - .env
     depends_on:
       - mysql
-    command: sh -c "npx prisma generate && npm run dev"
+    command: sh -c "npx prisma generate && npx prisma db push && npm run dev"
+
 
   mysql:
     image: mysql:8

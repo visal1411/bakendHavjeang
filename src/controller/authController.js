@@ -3,25 +3,24 @@ import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import { prisma } from '../config/db.js'
 
-
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey'
 const JWT_EXPIRE = '1d'
 
 // ================= REGISTER =================
 export const register = async (req, res) => {
   try {
-    const { name, phone, email, password, usertype } = req.body
+    const { name, phone, password, usertype } = req.body
 
-    if (!name || !phone || !email || !password || !usertype) {
+    if (!name || !phone || !password || !usertype) {
       return res.status(400).json({ message: 'All fields are required' })
     }
 
     const existingUser = await prisma.user.findUnique({
-      where: { email }
+      where: { phone }
     })
 
     if (existingUser) {
-      return res.status(400).json({ message: 'Email already registered' })
+      return res.status(400).json({ message: 'Phone already registered' })
     }
 
     const hashedPassword = await bcrypt.hash(password, 10)
@@ -30,7 +29,6 @@ export const register = async (req, res) => {
       data: {
         name,
         phone,
-        email,
         password: hashedPassword,
         usertype
       }
@@ -41,7 +39,7 @@ export const register = async (req, res) => {
       user: {
         id: user.id,
         name: user.name,
-        email: user.email,
+        phone: user.phone,
         usertype: user.usertype
       }
     })
@@ -54,19 +52,19 @@ export const register = async (req, res) => {
 // ================= LOGIN =================
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body
+    const { phone, password } = req.body
 
     const user = await prisma.user.findUnique({
-      where: { email }
+      where: { phone }
     })
 
     if (!user) {
-      return res.status(400).json({ message: 'Invalid email or password' })
+      return res.status(400).json({ message: 'Invalid phone or password' })
     }
 
     const isMatch = await bcrypt.compare(password, user.password)
     if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid email or password' })
+      return res.status(400).json({ message: 'Invalid phone or password' })
     }
 
     const token = jwt.sign(
@@ -81,7 +79,7 @@ export const login = async (req, res) => {
       user: {
         id: user.id,
         name: user.name,
-        email: user.email,
+        phone: user.phone,
         usertype: user.usertype
       }
     })
@@ -90,10 +88,3 @@ export const login = async (req, res) => {
     res.status(500).json({ message: 'Server error' })
   }
 }
-
-
-
-
-
-
-

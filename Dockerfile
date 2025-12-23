@@ -16,4 +16,5 @@ EXPOSE 5000
 
 # Generate Prisma client and start app
 # Use shell form instead of JSON array
-CMD sh -c "npx prisma generate && npm run dev"
+# Generate Prisma client, push schema to DB, and start app
+CMD sh -c "npx prisma generate && npx prisma db push && npm run dev"
