@@ -13,11 +13,6 @@ export const validateRegister = [
     .notEmpty().withMessage('Password is required')
     .isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
 
-  body('confirmPassword')
-    .notEmpty().withMessage('Password confirmation is required')
-    .custom((value, { req }) => value === req.body.password)
-    .withMessage('Passwords do not match'),
-
   body('usertype')
     .notEmpty().withMessage('User type is required')
     .isIn(['customer', 'mechanic'])
