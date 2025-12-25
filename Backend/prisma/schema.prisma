@@ -1,0 +1,83 @@
+// =====================
+// Datasource & Generator
+// =====================
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// =====================
+// Models
+// =====================
+
+model User {
+  id               Int              @id @default(autoincrement())
+  name             String           @db.VarChar(100)
+  phone String @unique @db.VarChar(20)
+  password         String           @db.VarChar(255)
+  created_at       DateTime         @default(now())
+  usertype         UserType
+
+  services         Service[]
+  serviceRequests  ServiceRequest[]
+}
+
+model Service {
+  id            Int          @id @default(autoincrement())
+  name          String       @db.VarChar(100)
+  price         Decimal      @db.Decimal(10, 2)
+  shopaddress   String       @db.VarChar(255)
+  location_lat  Float
+  location_lan  Float
+  serviceType   ServiceType
+
+  mechanicId    Int
+  mechanic      User         @relation(fields: [mechanicId], references: [id])
+
+  requests      ServiceRequest[]
+
+  @@index([mechanicId])
+}
+
+model ServiceRequest {
+  id           Int              @id @default(autoincrement())
+  request_date DateTime         @default(now())
+  status       RequestStatus
+  description  String?           @db.VarChar(500)
+  address      String           @db.VarChar(255)
+  request_lat  Float
+  request_lan  Float
+
+  customerId   Int
+  serviceId    Int
+
+  customer     User             @relation(fields: [customerId], references: [id])
+  service      Service          @relation(fields: [serviceId], references: [id])
+
+  @@index([customerId])
+  @@index([serviceId])
+}
+
+// =====================
+// Enums
+// =====================
+
+enum RequestStatus {
+  pending
+  completed
+  cancelled
+}
+
+enum ServiceType {
+  moto
+  car
+}
+
+enum UserType {
+  customer
+  mechanic
+}
