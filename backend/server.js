@@ -4,8 +4,6 @@ import { connectDB } from './src/config/db.js';
 import authRoutes from './src/routes/authenroutes.js';
 import serviceRoutes from './src/routes/serviceRoutes.js';
 import serviceRequestRoutes from './src/routes/x.js';
-import swaggerUi from 'swagger-ui-express'
-import YAML from 'yamljs'
 
 
 dotenv.config();
@@ -19,10 +17,6 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/servicerequests', serviceRequestRoutes);
-
-// ========= Swagger =========
-const swaggerDocument = YAML.load('./openapi.yaml');
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Server
 const PORT = process.env.PORT || 5000;
