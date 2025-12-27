@@ -9,7 +9,7 @@ const JWT_EXPIRE = process.env.JWT_EXPIRE
 // ================= REGISTER =================
 export const register = async (req, res) => {
   try {
-    const { name, phone, password, usertype } = req.body
+    const { name, phone, password, usertype, working_hours, opening_hours} = req.body
 
     if (!name || !phone || !password || !usertype) {
       return res.status(400).json({ message: 'All fields are required' })
@@ -25,12 +25,6 @@ export const register = async (req, res) => {
     message: 'Invalid phone number format'
     })
   }
-   // For mechanic, require working_hours and opening_hours
-    if (usertype === 'mechanic') {
-      if (!working_hours || !opening_hours) {
-        return res.status(400).json({ message: 'Mechanic must provide working_hours and opening_hours' })
-      }
-    }
         // 4️⃣ Mechanic hours validation **PUT YOUR CODE HERE**
     if (usertype === 'mechanic') {
       if (!working_hours || !opening_hours) {
