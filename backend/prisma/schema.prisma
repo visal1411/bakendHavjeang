@@ -33,7 +33,7 @@ model Service {
   price        Decimal          @db.Decimal(10, 2)
   shopaddress  String           @db.VarChar(255)
   location_lat Float
-  location_lan Float
+  location_lng Float
   serviceType  ServiceType
 
   mechanicId   Int
@@ -51,7 +51,9 @@ model ServiceRequest {
   description  String?          @db.VarChar(500)
   address      String           @db.VarChar(255)
   request_lat  Float
-  request_lan  Float
+  request_lng  Float
+  trip_price  Decimal          @db.Decimal(10, 2)
+  total_price Decimal          @db.Decimal(10, 2)
 
   customerId   Int
   customer     User             @relation(fields: [customerId], references: [id])

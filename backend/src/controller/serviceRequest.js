@@ -1,52 +1,112 @@
 import { prisma } from "../config/db.js"
-
+import { calculateTripAndTotalPrice } from "../service/pricingService.js"
 //
 // ============================
 // CUSTOMER: Create service request
 // ============================
 //
+
+
 export const createServiceRequest = async (req, res) => {
   try {
-    const customerId = req.user.id
-    const {
-      serviceIds,
-      description,
-      address,
-      request_lat,
-      request_lan
-    } = req.body
+    const customerId = req.user.id;
+    const { serviceIds, description, address, request_lng, request_lat } = req.body;
 
-    if (
-      !Array.isArray(serviceIds) ||
-      serviceIds.length === 0 ||
-      !address ||
-      request_lat === undefined ||
-      request_lan === undefined
-    ) {
-      return res.status(400).json({ message: "Missing required fields" })
+    if (!Array.isArray(serviceIds) || !serviceIds.length || !address || request_lat === undefined || request_lng === undefined) {
+      return res.status(400).json({ message: "Missing required fields" });
     }
 
+    const services = await prisma.service.findMany({
+      where: { id: { in: serviceIds } }
+    });
+
+    if (!services.length) {
+      return res.status(400).json({ message: "Selected services not found" });
+    }
+
+    for (const service of services) {
+      if (service.location_lat === undefined || service.location_lng === undefined) {
+        return res.status(400).json({ message: `Service coordinates missing for ID ${service.id}` });
+      }
+    }
+
+    const customerLocation = { lng: request_lng, lat: request_lat };
+
+    // Calculate distance and total price
+    const { tripPrice, totalPrice } = await calculateTripAndTotalPrice(customerLocation, services);
+
+    // Prisma expects only customerId (relation auto-handled)
     const request = await prisma.serviceRequest.create({
       data: {
         customerId,
         description,
         address,
         request_lat,
-        request_lan,
+        request_lng,
+        trip_price: tripPrice,
+        total_price: totalPrice,
         status: "pending",
         service: {
           connect: serviceIds.map(id => ({ id }))
         }
       },
       include: { service: true }
-    })
+    });
 
-    res.status(201).json(request)
+    // Respond with trip info included
+    res.status(201).json({
+      ...request,
+      tripDistanceKm: tripPrice / (Number(process.env.PRICE_PER_KM) || 1600),
+    });
+
   } catch (error) {
-    console.error(error)
-    res.status(500).json({ message: "Server error" })
+    console.error("Service request creation error:", error.message);
+    res.status(500).json({ message: error.message });
   }
-}
+};
+
+// export const createServiceRequest = async (req, res) => {
+//   try {
+//     const customerId = req.user.id
+//     const {
+//       serviceIds,
+//       description,
+//       address,
+//       request_lat,
+//       request_lng
+//     } = req.body
+
+//     if (
+//       !Array.isArray(serviceIds) ||
+//       serviceIds.length === 0 ||
+//       !address ||
+//       request_lat === undefined ||
+//       request_lng === undefined
+//     ) {
+//       return res.status(400).json({ message: "Missing required fields" })
+//     }
+
+//     const request = await prisma.serviceRequest.create({
+//       data: {
+//         customerId,
+//         description,        
+//         address,
+//         request_lat,
+//         request_lng,
+//         status: "pending",
+//         service: {
+//           connect: serviceIds.map(id => ({ id }))
+//         }
+//       },
+//       include: { service: true }
+//     })
+
+//     res.status(201).json(request)
+//   } catch (error) {
+//     console.error(error)
+//     res.status(500).json({ message: "Server error" })
+//   }
+// }
 
 
 //
@@ -54,6 +114,7 @@ export const createServiceRequest = async (req, res) => {
 // CUSTOMER: Get my service requests
 // ============================
 //
+
 export const getMyRequests = async (req, res) => {
   try {
     const customerId = req.user.id
