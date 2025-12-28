@@ -32,10 +32,10 @@ export const createServiceRequest = async (req, res) => {
 
     const customerLocation = { lng: request_lng, lat: request_lat };
 
-    // Calculate distance and total price
-    const { tripPrice, totalPrice } = await calculateTripAndTotalPrice(customerLocation, services);
+    // Calculate distance, trip price, and total price **once**
+    const { tripDistanceKm, tripPrice, totalPrice } = await calculateTripAndTotalPrice(customerLocation, services);
 
-    // Prisma expects only customerId (relation auto-handled)
+    // Create service request
     const request = await prisma.serviceRequest.create({
       data: {
         customerId,
@@ -56,7 +56,9 @@ export const createServiceRequest = async (req, res) => {
     // Respond with trip info included
     res.status(201).json({
       ...request,
-      tripDistanceKm: tripPrice / (Number(process.env.PRICE_PER_KM) || 1600),
+      tripDistanceKm,
+      tripPrice,
+      totalPrice
     });
 
   } catch (error) {
@@ -64,6 +66,7 @@ export const createServiceRequest = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 // export const createServiceRequest = async (req, res) => {
 //   try {

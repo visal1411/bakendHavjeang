@@ -1,4 +1,3 @@
-// src/service/distance/orsDistance.js
 import axios from "axios";
 
 export async function getDistanceKmORS(origin, destination) {
@@ -10,7 +9,7 @@ export async function getDistanceKmORS(origin, destination) {
       url,
       {
         coordinates: [
-          [origin.lng, origin.lat],       // ORS expects [lng, lat]
+          [origin.lng, origin.lat],
           [destination.lng, destination.lat]
         ],
         instructions: false,
@@ -24,15 +23,15 @@ export async function getDistanceKmORS(origin, destination) {
       }
     );
 
-    const feature = response.data?.features?.[0];
-    const segment = feature?.properties?.segments?.[0];
-
-    if (!segment) {
+    // ORS returns "routes[0].summary.distance"
+    const route = response.data?.routes?.[0];
+    if (!route || !route.summary) {
       console.error("ORS raw response:", JSON.stringify(response.data, null, 2));
       throw new Error("No route returned from ORS");
     }
 
-    return segment.distance / 1000; // meters → km
+    return route.summary.distance / 1000; // meters → km
+
   } catch (error) {
     console.error("ORS distance error:", error.response?.data || error.message);
     throw new Error("Cannot calculate distance via ORS");

@@ -30,7 +30,7 @@ model User {
 model Service {
   id           Int              @id @default(autoincrement())
   name         String           @db.VarChar(100)
-  price        Decimal          @db.Decimal(10, 2)
+  price        Int
   shopaddress  String           @db.VarChar(255)
   location_lat Float
   location_lng Float
@@ -52,8 +52,8 @@ model ServiceRequest {
   address      String           @db.VarChar(255)
   request_lat  Float
   request_lng  Float
-  trip_price  Decimal          @db.Decimal(10, 2)
-  total_price Decimal          @db.Decimal(10, 2)
+  trip_price  Int
+  total_price  Int
 
   customerId   Int
   customer     User             @relation(fields: [customerId], references: [id])
