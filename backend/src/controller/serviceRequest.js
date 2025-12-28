@@ -67,51 +67,6 @@ export const createServiceRequest = async (req, res) => {
   }
 };
 
-
-// export const createServiceRequest = async (req, res) => {
-//   try {
-//     const customerId = req.user.id
-//     const {
-//       serviceIds,
-//       description,
-//       address,
-//       request_lat,
-//       request_lng
-//     } = req.body
-
-//     if (
-//       !Array.isArray(serviceIds) ||
-//       serviceIds.length === 0 ||
-//       !address ||
-//       request_lat === undefined ||
-//       request_lng === undefined
-//     ) {
-//       return res.status(400).json({ message: "Missing required fields" })
-//     }
-
-//     const request = await prisma.serviceRequest.create({
-//       data: {
-//         customerId,
-//         description,        
-//         address,
-//         request_lat,
-//         request_lng,
-//         status: "pending",
-//         service: {
-//           connect: serviceIds.map(id => ({ id }))
-//         }
-//       },
-//       include: { service: true }
-//     })
-
-//     res.status(201).json(request)
-//   } catch (error) {
-//     console.error(error)
-//     res.status(500).json({ message: "Server error" })
-//   }
-// }
-
-
 //
 // ============================
 // CUSTOMER: Get my service requests

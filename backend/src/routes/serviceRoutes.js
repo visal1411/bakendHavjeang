@@ -12,7 +12,7 @@ import {
 const serviceRoutes = express.Router()
 
 // MECHANIC creates a service
-serviceRoutes.post("/", authenticateToken, isMechanic, createService)
+serviceRoutes.post("/", authenticateToken, isMechanic, requireFirstService, createService)
 
 // MECHANIC views all own services
 serviceRoutes.get("/my", authenticateToken, isMechanic, requireFirstService, getMyServices)
