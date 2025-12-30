@@ -33,7 +33,7 @@ export const register = async (req, res) => {
     }
 
     if (usertype === "mechanic") {
-      if (!working_hours || !opening_hours) {
+      if (!working_hours) {
         return res.status(400).json({
           message: "Mechanic must provide working_hours and opening_hours"
         })

@@ -7,7 +7,9 @@ import {
   getMyRequests,
   cancelServiceRequest,
   getIncomingRequests,
-  completeServiceRequest
+  completeServiceRequest,
+  getNearbyMechanics,
+  acceptServiceRequest
 } from "../controller/serviceRequest.js";
 
 const serviceRequestRoutes = express.Router();
@@ -25,6 +27,8 @@ serviceRequestRoutes.get("/my", authenticateToken, isCustomer, getMyRequests);
 // Customer cancels request
 serviceRequestRoutes.patch("/:id/cancel", authenticateToken, isCustomer, cancelServiceRequest);
 
+serviceRequestRoutes.get("/nearby", authenticateToken, isCustomer, getNearbyMechanics);
+
 // =====================
 // MECHANIC ROUTES
 // =====================
@@ -34,5 +38,8 @@ serviceRequestRoutes.get("/incoming", authenticateToken, isMechanic, getIncoming
 
 // Mechanic completes request
 serviceRequestRoutes.patch("/:id/complete", authenticateToken, isMechanic, completeServiceRequest);
+
+// Mechanic accepts request
+serviceRequestRoutes.patch("/:id/accept", authenticateToken, isMechanic, acceptServiceRequest);
 
 export default serviceRequestRoutes;

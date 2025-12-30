@@ -32,7 +32,6 @@ model Service {
   id           Int              @id @default(autoincrement())
   name         String           @db.VarChar(100)
   price        Int
-  shopaddress  String           @db.VarChar(255)
   serviceType  ServiceType
 
   mechanicId   Int
@@ -71,6 +70,7 @@ enum RequestStatus {
   pending
   completed
   cancelled
+  accepted
 }
 
 enum ServiceType {
