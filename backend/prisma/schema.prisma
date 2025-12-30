@@ -21,7 +21,8 @@ model User {
   created_at       DateTime         @default(now())
   usertype         UserType
   working_hours    String?          @db.VarChar(100)
-  opening_hours    String?          @db.VarChar(100)
+  mechanic_lat   Float?
+  mechanic_lng   Float?
 
   service         Service[]        // services mechanic provides
   serviceRequests  ServiceRequest[] // requests customer made
@@ -32,8 +33,6 @@ model Service {
   name         String           @db.VarChar(100)
   price        Int
   shopaddress  String           @db.VarChar(255)
-  location_lat Float
-  location_lng Float
   serviceType  ServiceType
 
   mechanicId   Int
