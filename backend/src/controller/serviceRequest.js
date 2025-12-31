@@ -304,6 +304,13 @@ export const completeServiceRequest = async (req, res) => {
       })
     }
 
+    if (request.status !== "accepted") {
+      return res.status(400).json({
+        message: "Only accepted requests can be completed"
+      })
+    }
+
+
     const updatedRequest = await prisma.serviceRequest.update({
       where: { id: requestId },
       data: { status: "completed" }
@@ -311,6 +318,57 @@ export const completeServiceRequest = async (req, res) => {
 
     res.json({
       message: "Service request completed successfully",
+      request: updatedRequest
+    })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ message: "Server error" })
+  }
+}
+
+//
+// ============================
+// MECHANIC: Accept service request
+// ============================
+//
+export const acceptServiceRequest = async (req, res) => {
+  try {
+    const mechanicId = req.user.id
+    const requestId = Number(req.params.id)
+
+    const request = await prisma.serviceRequest.findUnique({
+      where: { id: requestId },
+      include: { service: true },
+    })
+
+    if (!request) {
+      return res.status(404).json({ message: "Service request not found" })
+    }
+
+    if (request.status !== "pending") {
+      return res.status(400).json({
+        message: "Only pending requests can be accepted"
+      })
+    }
+
+    // Ensure this request belongs to this mechanic
+    const belongsToMechanic = request.service.some(
+      s => s.mechanicId === mechanicId
+    )
+
+    if (!belongsToMechanic) {
+      return res.status(403).json({
+        message: "You are not allowed to accept this request"
+      })
+    }
+
+    const updatedRequest = await prisma.serviceRequest.update({
+      where: { id: requestId },
+      data: { status: "accepted" }
+    })
+
+    res.json({
+      message: "Service request accepted",
       request: updatedRequest
     })
   } catch (error) {
