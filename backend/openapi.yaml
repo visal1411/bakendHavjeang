@@ -13,106 +13,6 @@ components:
       scheme: bearer
       bearerFormat: JWT
 
-  schemas:
-    ServiceRequest:
-      type: object
-      properties:
-        id:
-          type: integer
-          example: 1
-        customerId:
-          type: integer
-          example: "1"
-        serviceId:
-          type: integer
-          example: "1"
-        description:
-          type: string
-          nullable: true
-          example: "Car engine not starting"
-        address:
-          type: string
-          example: "123 Main St"
-        request_lat:
-          type: number
-          format: float
-          example: 11.562108
-        request_lan:
-          type: number
-          format: float
-          example: 104.888535
-        status:
-          type: string
-          enum: [pending, completed, cancelled]
-          example: pending
-        request_date:
-          type: string
-          format: date-time
-          example: "2025-12-26T12:00:00Z"
-        service:
-          type: object
-          properties:
-            id:
-              type: integer
-              example: "1"
-            name:
-              type: string
-              example: "car"
-            mechanic:
-              type: object
-              properties:
-                id:
-                  type: integer
-                  example: "1"
-                name:
-                  type: string
-                  example: "John Doe"
-                phone:
-                  type: string
-                  example: "0123456789"
-        customer:
-          type: object
-          properties:
-            id:
-              type: integer
-              example: "1"
-            name:
-              type: string
-              example: "Alice"
-            phone:
-              type: string
-              example: "0987654321"
-    Service:
-      type: object
-      properties:
-        id:
-          type: integer
-          example: 1
-        name:
-          type: string
-          example: "Car Repair"
-        price:
-          type: number
-          format: float
-          example: 50.0
-        shopaddress:
-          type: string
-          example: "123 Main St"
-        location_lat:
-          type: number
-          format: float
-          example: 11.562108
-        location_lan:
-          type: number
-          format: float
-          example: 104.888535
-        serviceType:
-          type: string
-          example: "car"
-        mechanicId:
-          type: integer
-          example: 1
-
 paths:
   /auth/register:
     post:
@@ -133,19 +33,35 @@ paths:
               properties:
                 name:
                   type: string
-                  example: John Doe
+                  example: "John Doe"
                 phone:
                   type: string
-                  example: 077382567
+                  example: "077382567"
+                  description: Phone number must start with 0
                 password:
                   type: string
-                  example: 12345678
+                  example: "12345678"
+                  description: Password must be at least 8 characters long
                 usertype:
                   type: string
                   enum:
                     - customer
                     - mechanic
                   example: mechanic
+                working_hours:
+                  type: string
+                  example: "9am - 5pm"
+                  description: Required if usertype is mechanic
+                mechanic_lat:
+                  type: number
+                  format: float
+                  example: 11.562108
+                  description: Required if usertype is mechanic
+                mechanic_lng:
+                  type: number
+                  format: float
+                  example: 104.888535
+                  description: Required if usertype is mechanic
       responses:
         '201':
           description: User registered successfully
@@ -169,10 +85,10 @@ paths:
               properties:
                 phone:
                   type: string
-                  example: 077382567
+                  example: "077382567"
                 password:
                   type: string
-                  example: 12345678
+                  example: "12345678"
       responses:
         '200':
           description: User logged in successfully
@@ -188,97 +104,44 @@ paths:
         '401':
           description: Invalid phone or password
 
-  /servicerequests:
-    post:
-      summary: Customer creates a service request
-      tags:
-        - Customer
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - serviceId
-                - description
-                - address
-                - request_lat
-                - request_lan
-              properties:
-                serviceId:
-                  type: integer
-                  example: 1
-                description:
-                  type: string
-                  example: "Car engine not starting"
-                address:
-                  type: string
-                  example: "123 Main St"
-                request_lat:
-                  type: number
-                  example: 11.562108
-                request_lan:
-                  type: number
-                  example: 104.888535
-      responses:
-        '201':
-          description: Service request created successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Service request created successfully"
-                  request:
-                    $ref: '#/components/schemas/ServiceRequest'
-        '400':
-          description: Missing required fields
-        '404':
-          description: Service not found
-        '500':
-          description: Server error
-
-  /servicerequests/my:
+  /auth/check-session:
     get:
-      summary: Customer views own service requests
+      summary: Check if the current user session is valid
       tags:
-        - Customer
+        - Auth
       security:
         - BearerAuth: []
+
       responses:
-        '200':
-          description: List of service requests
+        "200":
+          description: User is authenticated
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ServiceRequest'
-        '500':
-          description: Server error
+                type: object
+                properties:
+                  authenticated:
+                    type: boolean
+                    example: true
+                  user:
+                    type: object
+                    description: Decoded JWT payload
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      role:
+                        type: string
+                        example: mechanic
+                      iat:
+                        type: integer
+                        example: 1700000000
+                      exp:
+                        type: integer
+                        example: 1700003600
 
-  /servicerequests/{id}/cancel:
-    patch:
-      summary: Customer cancels a service request
-      tags:
-        - Customer
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: ID of the service request
-      responses:
-        '200':
-          description: Service request cancelled successfully
+        "401":
+          description: Unauthorized - missing or invalid token
           content:
             application/json:
               schema:
@@ -286,232 +149,6 @@ paths:
                 properties:
                   message:
                     type: string
-                    example: "Service request cancelled successfully"
-                  request:
-                    $ref: '#/components/schemas/ServiceRequest'
-        '400':
-          description: Only pending requests can be cancelled
-        '403':
-          description: Not allowed to cancel this request
-        '404':
-          description: Service request not found
-        '500':
-          description: Server error
+                    example: Invalid or expired token
 
-  /servicerequests/incoming:
-    get:
-      summary: Mechanic views incoming service requests
-      tags:
-        - Mechanic
-      security:
-        - BearerAuth: []
-      responses:
-        '200':
-          description: List of incoming requests
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ServiceRequest'
-        '500':
-          description: Server error
 
-  /servicerequests/{id}/complete:
-    patch:
-      summary: Mechanic completes a service request
-      tags:
-        - Mechanic
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: ID of the service request
-      responses:
-        '200':
-          description: Service request completed successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Service request completed successfully"
-                  request:
-                    $ref: '#/components/schemas/ServiceRequest'
-        '403':
-          description: Not allowed to update this request
-        '404':
-          description: Service request not found
-        '500':
-          description: Server error
-  /services:
-    post:
-      summary: Mechanic creates a service
-      tags:
-        - Mechanic
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - name
-                - price
-                - shopaddress
-                - location_lat
-                - location_lan
-                - serviceType
-              properties:
-                name:
-                  type: string
-                  example: "Car Repair"
-                price:
-                  type: number
-                  example: 50.0
-                shopaddress:
-                  type: string
-                  example: "123 Main St"
-                location_lat:
-                  type: number
-                  example: 11.562108
-                location_lan:
-                  type: number
-                  example: 104.888535
-                serviceType:
-                  type: string
-                  example: "Engine"
-      responses:
-        '201':
-          description: Service created successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Service created successfully"
-                  service:
-                    $ref: '#/components/schemas/Service'
-        '400':
-          description: Missing required fields
-        '500':
-          description: Server error
-
-  /services/my:
-    get:
-      summary: Mechanic views all own services
-      tags:
-        - Mechanic
-      security:
-        - BearerAuth: []
-      responses:
-        '200':
-          description: List of services
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Service'
-        '500':
-          description: Server error
-
-  /services/{id}:
-    put:
-      summary: Mechanic updates a service
-      tags:
-        - Mechanic
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: ID of the service to update
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                  example: "Car Repair"
-                price:
-                  type: number
-                  example: 60.0
-                shopaddress:
-                  type: string
-                  example: "123 Main St"
-                location_lat:
-                  type: number
-                  example: 11.562108
-                location_lan:
-                  type: number
-                  example: 104.888535
-                serviceType:
-                  type: string
-                  example: "Engine"
-      responses:
-        '200':
-          description: Service updated successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Service updated successfully"
-                  service:
-                    $ref: '#/components/schemas/Service'
-        '403':
-          description: Not allowed to update this service
-        '404':
-          description: Service not found
-        '500':
-          description: Server error
-
-    delete:
-      summary: Mechanic deletes a service
-      tags:
-        - Mechanic
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: ID of the service to delete
-      responses:
-        '200':
-          description: Service deleted successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Service deleted successfully"
-        '403':
-          description: Not allowed to delete this service
-        '404':
-          description: Service not found
-        '500':
-          description: Server error

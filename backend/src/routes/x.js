@@ -9,7 +9,7 @@ import {
   cancelServiceRequest,
   getIncomingRequests,
   completeServiceRequest,
-  getNearbyMechanics,
+
   acceptServiceRequest
 } from "../controller/serviceRequest.js";
 
