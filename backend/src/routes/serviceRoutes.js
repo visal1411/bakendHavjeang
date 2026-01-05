@@ -1,12 +1,13 @@
 import express from "express"
 import { authenticateToken } from "../middleware/authMiddleware.js"
-import { isMechanic } from "../middleware/rolebase.js"
+import { isCustomer, isMechanic } from "../middleware/rolebase.js"
 import { requireFirstService } from "../middleware/ServiceRequire.js"
 import {
   createService,
   getMyServices,
   updateService,
-  deleteService
+  deleteService,
+
 } from "../controller/service.js"
 
 const serviceRoutes = express.Router()
@@ -22,5 +23,7 @@ serviceRoutes.put("/:id", authenticateToken, isMechanic, requireFirstService, up
 
 // MECHANIC deletes a service
 serviceRoutes.delete("/:id", authenticateToken, isMechanic, requireFirstService, deleteService)
+
+
 
 export default serviceRoutes

@@ -9,7 +9,8 @@ import {
   cancelServiceRequest,
   getIncomingRequests,
   completeServiceRequest,
-
+  getServicesByMechanic,
+  getMechanicById,
   acceptServiceRequest
 } from "../controller/serviceRequest.js";
 
@@ -29,6 +30,12 @@ serviceRequestRoutes.get("/my", authenticateToken, isCustomer, getMyRequests);
 serviceRequestRoutes.patch("/:id/cancel", authenticateToken, isCustomer, cancelServiceRequest);
 
 serviceRequestRoutes.get("/nearby", authenticateToken, isCustomer, getNearbyMechanics);
+
+// Get mechanic details by ID
+serviceRequestRoutes.get("/mechanic/:id", authenticateToken, isCustomer, getMechanicById);
+
+// Customer view all services by a mechanic
+serviceRequestRoutes.get("/service/:mechanicId", authenticateToken, isCustomer, getServicesByMechanic)
 
 // =====================
 // MECHANIC ROUTES

@@ -119,3 +119,16 @@ export const deleteService = async (req, res) => {
     res.status(500).json({ message: "Server error" })
   }
 }
+
+//  retrive service's info
+export const getServiceInfo = async (req, res)=>{
+  try {
+    
+  }
+  catch (error) {
+    console.error(error)
+    res.status(500).json({ message: "Server error" })
+  }
+}
+
+
