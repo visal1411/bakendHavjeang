@@ -1,7 +1,7 @@
 // src/routes/serviceRequestRoutes.js
 import express from "express";
-import { authenticateToken } from "../middleware/AuthMiddleware.js";
-import { isCustomer, isMechanic } from "../middleware/Rolebase.js";
+import { authenticateToken } from "../middleware/authMiddleware.js";
+import { isCustomer, isMechanic } from "../middleware/rolebase.js";
 import {
   createServiceRequest,
   getMyRequests,
