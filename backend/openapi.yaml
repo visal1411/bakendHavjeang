@@ -1,0 +1,155 @@
+openapi: 3.0.3
+info:
+  title: HavJeang
+  version: 1.0.0
+  description: HavJeang API Documentation
+servers:
+  - url: http://localhost:5000/api
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+paths:
+  /auth/register:
+    post:
+      summary: Register a new user as (customer or mechanic)
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - phone
+                - password
+                - usertype
+              properties:
+                name:
+                  type: string
+                  example: "John Doe"
+                phone:
+                  type: string
+                  example: "077382567"
+                  description: Phone number must start with 0, be unique, be 8 digits or 9 digits, and only numbers.
+                password:
+                  type: string
+                  example: "12345678"
+                  description: Password must be at least 8 characters long
+                usertype:
+                  type: string
+                  enum:
+                    - customer
+                    - mechanic
+                  example: mechanic
+                  description: Customer or Mechanic (semi-case-sensitive)
+                working_hours:
+                  type: string
+                  example: "9am - 5pm"
+                  description: Required if usertype is mechanic, start must be before end, and format must be in hh:mm - hh:mm
+                mechanic_lat:
+                  type: number
+                  format: float
+                  example: 11.562108
+                  description: Required if usertype is mechanic
+                mechanic_lng:
+                  type: number
+                  format: float
+                  example: 104.888535
+                  description: Required if usertype is mechanic
+      responses:
+        "201":
+          description: User registered successfully
+        "400":
+          description: Validation Errors
+
+  /auth/login:
+    post:
+      summary: Login User
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phone
+                - password
+              properties:
+                phone:
+                  type: string
+                  example: "077382567"
+                  description: Phone number must be 8 digits or above
+                password:
+                  type: string
+                  example: "12345678"
+                  description: Password must be 8 digits or above
+      responses:
+        "200":
+          description: User logged in successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                    description: JWT access token
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        "401":
+          description: Invalid phone or password
+
+  /auth/check-session:
+    get:
+      summary: Check if the current user session is valid
+      tags:
+        - Auth
+      security:
+        - BearerAuth: []
+
+      responses:
+        "200":
+          description: User is authenticated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  authenticated:
+                    type: boolean
+                    example: true
+                  user:
+                    type: object
+                    description: Decoded JWT payload
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      role:
+                        type: string
+                        example: mechanic
+                      iat:
+                        type: integer
+                        example: 1700000000
+                      exp:
+                        type: integer
+                        example: 1700003600
+
+        "401":
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Invalid or expired token

@@ -1,0 +1,84 @@
+// =====================
+// Datasource & Generator
+// =====================
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// =====================
+// Models
+// =====================
+model User {
+  id               Int              @id @default(autoincrement())
+  name             String           @db.VarChar(100)
+  phone            String           @unique @db.VarChar(20)
+  password         String           @db.VarChar(255)
+  created_at       DateTime         @default(now())
+  usertype         UserType
+  working_hours    String?          @db.VarChar(100)
+  mechanic_lat   Float?
+  mechanic_lng   Float?
+
+  service         Service[]        // services mechanic provides
+  serviceRequests  ServiceRequest[] // requests customer made
+}
+
+model Service {
+  id           Int              @id @default(autoincrement())
+  name         String           @db.VarChar(100)
+  price        Int
+  serviceType  ServiceType
+
+  mechanicId   Int
+  mechanic     User             @relation(fields: [mechanicId], references: [id])
+
+  requests     ServiceRequest[] @relation("ServiceOnRequest") // many-to-many
+
+  @@index([mechanicId])
+}
+
+model ServiceRequest {
+  id           Int              @id @default(autoincrement())
+  request_date DateTime         @default(now())
+  status       RequestStatus
+  description  String?          @db.VarChar(500)
+  address      String           @db.VarChar(255)
+  request_lat  Float
+  request_lng  Float
+  trip_price  Int
+  total_price  Int
+
+  customerId   Int
+  customer     User             @relation(fields: [customerId], references: [id])
+
+  service     Service[]        @relation("ServiceOnRequest") // many-to-many
+
+  @@index([customerId])
+}
+
+
+// =====================
+// Enums
+// =====================
+
+enum RequestStatus {
+  pending
+  completed
+  cancelled
+  accepted
+}
+
+enum ServiceType {
+  moto
+  car
+}
+
+enum UserType {
+  customer
+  mechanic
+}
