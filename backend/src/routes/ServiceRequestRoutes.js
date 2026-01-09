@@ -13,7 +13,7 @@ import {
   getMechanicById,
   getServicesByMechanic
 
-} from "../controller/ServiceRequest.js";
+} from "../controller/serviceRequest.js";
 
 const serviceRequestRoutes = express.Router();
 
