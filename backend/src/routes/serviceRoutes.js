@@ -1,7 +1,7 @@
 import express from "express"
 import { authenticateToken } from "../middleware/authMiddleware.js"
 import { isMechanic } from "../middleware/rolebase.js"
-import { requireFirstService } from "../middleware/ServiceRequire.js"
+import { requireFirstService } from "../middleware/serviceRequire.js"
 import {
   createService,
   getMyServices,
