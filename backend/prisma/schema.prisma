@@ -81,8 +81,4 @@ enum ServiceType {
 enum UserType {
   customer
   mechanic
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> df02bb519031cf4cb00ef8b3a23be9fd7b13cf02
