@@ -153,3 +153,325 @@ paths:
                   message:
                     type: string
                     example: Invalid or expired token
+
+  /servicerequests/{id}/info:
+    get:
+      summary: Get a specific mechanic info
+      tags:
+        - Customer
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the mechanic
+      responses:
+        "200":
+          description: Successfully retrieved mechanic's services
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+                    mechanic_lat:
+                      type: number
+                      format: float
+                    mechanic_lng:
+                      type: number
+                      format: float
+                    working_hours:
+                      type: string
+        "401":
+          description: Unauthorized - missing or invalid token
+        "404":
+          description: Mechanic not found
+
+  /servicerequests/{mechanicId}/services:
+    get:
+      summary: Get all services offered by a mechanic
+      tags:
+        - Customer
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: mechanicId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the mechanic
+      responses:
+        "200":
+          description: Successfully retrieved mechanic's services
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+                    price:
+                      type: integer
+                    serviceType:
+                      type: string
+                      enum:
+                        - moto
+                        - car
+                    mechanicId:
+                      type: integer
+        "401":
+          description: Unauthorized - missing or invalid token
+        "404":
+          description: Mechanic not found
+
+  /services/{id}:
+    put:
+      summary: Mechanic updates service information
+      tags:
+        - Mechanic
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the service to update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "Oil Change"
+                price:
+                  type: integer
+                  example: 500
+                serviceType:
+                  type: string
+                  enum:
+                    - moto
+                    - car
+                  example: "car"
+      responses:
+        "200":
+          description: Service updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  price:
+                    type: integer
+                  serviceType:
+                    type: string
+                    enum:
+                      - moto
+                      - car
+                  mechanicId:
+                    type: integer
+        "401":
+          description: Unauthorized - missing or invalid token
+        "403":
+          description: Forbidden - not authorized to update this service
+        "404":
+          description: Service not found
+    delete:
+      summary: Mechanic deletes a service
+      tags:
+        - Mechanic
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the service to delete
+      responses:
+        "200":
+          description: Service deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Service deleted successfully"
+        "401":
+          description: Unauthorized - missing or invalid token
+        "403":
+          description: Forbidden - not authorized to delete this service
+        "404":
+          description: Service not found
+
+  /services:
+    post:
+      summary: Mechanic creates a new service
+      tags:
+        - Mechanic
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - price
+                - serviceType
+              properties:
+                name:
+                  type: string
+                  example: "Oil Change"
+                  description: Name of the service
+                price:
+                  type: number
+                  example: 500
+                  description: Price of the service
+                serviceType:
+                  type: string
+                  enum:
+                    - moto
+                    - car
+                  example: "car"
+                  description: Type of vehicle the service is for
+      responses:
+        "201":
+          description: Service created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  price:
+                    type: number
+                  serviceType:
+                    type: string
+                    enum:
+                      - moto
+                      - car
+                  mechanicId:
+                    type: integer
+        "400":
+          description: Missing or invalid required fields
+        "401":
+          description: Unauthorized - missing or invalid token
+        "403":
+          description: Forbidden - only mechanics can create services
+
+  /servicerequests/nearby:
+   get:
+    summary: Get nearby mechanics
+    description: Returns a list of mechanics near the authenticated customer’s location.
+    tags:
+      - Customer
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: lat
+        in: query
+        required: true
+        schema:
+          type: number
+          format: float
+        description: Customer's current latitude
+      - name: lng
+        in: query
+        required: true
+        schema:
+          type: number
+          format: float
+        description: Customer's current longitude
+    responses:
+      "200":
+        description: List of nearby mechanics
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "mech_12345"
+                  name:
+                    type: string
+                    example: "John's Auto Repair"
+                  phone:
+                    type: string
+                    example: "+85512345678"
+                  distance:
+                    type: number
+                    format: float
+                    example: 2.5
+                  location:
+                    type: object
+                    properties:
+                      latitude:
+                        type: number
+                        format: float
+                        example: 11.5564
+                      longitude:
+                        type: number
+                        format: float
+                        example: 104.9282
+                  services:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: "srv_98765"
+                        name:
+                          type: string
+                          example: "Oil Change"
+                        price:
+                          type: integer
+                          example: 25
+                        serviceType:
+                          type: string
+                          enum:
+                            - moto
+                            - car
+                          example: "car"
+      "401":
+        description: Unauthorized – missing or invalid token
+      "403":
+        description: Forbidden – user is not a customer
+      "500":
+        description: Internal server error
+
+
+

@@ -223,7 +223,7 @@ export const cancelServiceRequest = async (req, res) => {
       where: { id: requestId },
       data: { status: "cancelled" }
     })
-    
+
 
     res.json({
       message: "Service request cancelled successfully",
@@ -235,7 +235,8 @@ export const cancelServiceRequest = async (req, res) => {
   }
 }
 
-// customer view mehcanic info
+
+// customer view mehcanic's services
 // ================= GET MECHANIC BY ID =================
 export const getMechanicById = async (req, res) => {
   try {
@@ -259,7 +260,7 @@ export const getMechanicById = async (req, res) => {
     }
 
     res.status(200).json({
-      message: "Retrive mechanic's info successfully",
+      message: "Mechanic fetched successfully",
       mechanic
     })
   } catch (error) {
@@ -268,7 +269,7 @@ export const getMechanicById = async (req, res) => {
   }
 }
 
-// customer view mehcanic's services
+
 // // GET /service/mechanic/:mechanicId
 export const getServicesByMechanic = async (req, res) => {
   try {
@@ -294,29 +295,29 @@ export const getIncomingRequests = async (req, res) => {
   try {
     const mechanicId = req.user.id
 
-const requests = await prisma.serviceRequest.findMany({
-  where: {
-    service: {
-      some: {
-        mechanicId
-      }
-    },
-    status: "pending"
-  },
-  include: {
-    customer: {
-      select: { id: true, name: true, phone: true }
-    },
-    service: true
-  },
-  orderBy: { request_date: "asc" }
-})
+    const requests = await prisma.serviceRequest.findMany({
+      where: {
+        service: {
+          some: {
+            mechanicId
+          }
+        },
+        status: "pending"
+      },
+      include: {
+        customer: {
+          select: { id: true, name: true, phone: true }
+        },
+        service: true
+      },
+      orderBy: { request_date: "asc" }
+    })
 
-if (requests.length === 0) {
-  return res.json({ message: "No incoming service requests", data: [] })
-}
+    if (requests.length === 0) {
+      return res.json({ message: "No incoming service requests", data: [] })
+    }
 
-res.json(requests)
+    res.json(requests)
 
   } catch (error) {
     console.error(error)
@@ -426,3 +427,4 @@ export const acceptServiceRequest = async (req, res) => {
     res.status(500).json({ message: "Server error" })
   }
 }
+

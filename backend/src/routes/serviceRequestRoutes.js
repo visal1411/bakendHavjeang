@@ -34,10 +34,10 @@ serviceRequestRoutes.patch("/:id/cancel", authenticateToken, isCustomer, cancelS
 serviceRequestRoutes.get("/nearby", authenticateToken, isCustomer, getNearbyMechanics);
 
 // Customer get mechanic info
-serviceRequestRoutes.get("/mechanic/:id", authenticateToken, isCustomer, getMechanicById)
+serviceRequestRoutes.get("/:id/info", authenticateToken, isCustomer, getMechanicById)
 
 // Customer view all services by a mechanic
-serviceRequestRoutes.get("/mechanic/:mechanicId", authenticateToken, isCustomer, getServicesByMechanic)
+serviceRequestRoutes.get("/:mechanicId/services", authenticateToken, isCustomer, getServicesByMechanic)
 
 
 // =====================
