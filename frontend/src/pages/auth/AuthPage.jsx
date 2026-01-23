@@ -31,7 +31,7 @@ import { Eye, EyeOff, Phone, Lock, User, Briefcase, Award, Upload, Wrench, UserC
  */
 const AuthPage = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
   
   const [mode, setMode] = useState('login'); // 'login' or 'signup'
   const [role, setRole] = useState('customer'); // 'customer' or 'mechanic' - ONLY for signup
@@ -51,6 +51,17 @@ const AuthPage = () => {
     workHourStart: '',
     workHourEnd: '',
   });
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.role === 'customer') {
+        navigate('/customer/home', { replace: true });
+      } else if (user.role === 'mechanic') {
+        navigate('/mechanic/dashboard', { replace: true });
+      }
+    }
+  }, [isAuthenticated, user, navigate]);
 
   // Clear mechanic-specific fields when switching from mechanic to customer
   useEffect(() => {

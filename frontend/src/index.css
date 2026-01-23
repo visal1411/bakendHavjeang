@@ -1,18 +1,53 @@
-@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Khmer:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Global Styles */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  /* Prevent text size adjustment on orientation change */
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+
+  /* Smooth scrolling */
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   padding: 0;
-  font-family: "Noto Sans Khmer", "Inter", system-ui, sans-serif;
+  font-family: "Manrope", system-ui, sans-serif;
+
+  /* Prevent pull-to-refresh on mobile */
+  overscroll-behavior-y: contain;
+
+  /* Better font rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Prevent zoom on input focus in iOS */
+  touch-action: manipulation;
+}
+
+/* Prevent zoom on double-tap for iOS */
+button,
+a {
+  touch-action: manipulation;
 }
 
 /* Safe area for mobile devices */
 .safe-area-bottom {
   padding-bottom: max(env(safe-area-inset-bottom), 0px);
+}
+
+.safe-area-top {
+  padding-top: max(env(safe-area-inset-top), 0px);
 }
 
 .safe-area-inset {
@@ -38,9 +73,47 @@ body {
   display: none;
 }
 
+/* Better scrollbar for desktop */
+@media (min-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+}
+
 /* Leaflet Map Styles */
 .leaflet-container {
   font-family: "Inter", system-ui, sans-serif;
+  /* Prevent default map gestures from interfering with mobile scrolling */
+  touch-action: pan-x pan-y;
+}
+
+/* Improve touch targets for map controls on mobile */
+@media (max-width: 768px) {
+  .leaflet-control-zoom a {
+    width: 44px !important;
+    height: 44px !important;
+    line-height: 44px !important;
+    font-size: 20px !important;
+  }
+
+  .leaflet-control-attribution {
+    font-size: 9px !important;
+  }
 }
 
 /* Custom marker styles */
@@ -80,4 +153,39 @@ body {
   background: rgba(255, 255, 255, 0.8) !important;
   border-radius: 4px;
   padding: 2px 4px;
+}
+
+/* Focus styles for accessibility */
+*:focus-visible {
+  outline: 2px solid #155dfc;
+  outline-offset: 2px;
+}
+
+/* Ensure buttons and interactive elements have proper touch targets on mobile */
+@media (max-width: 768px) {
+  button,
+  a,
+  [role="button"],
+  input[type="submit"],
+  input[type="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Prevent text selection on interactive elements for better mobile UX */
+button,
+.no-select {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+}
+
+/* Utility classes for responsive text */
+.text-responsive {
+  font-size: clamp(0.875rem, 2vw, 1rem);
+}
+
+.heading-responsive {
+  font-size: clamp(1.25rem, 4vw, 2rem);
 }
