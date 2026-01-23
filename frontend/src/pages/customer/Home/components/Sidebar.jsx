@@ -9,12 +9,20 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { handleLogout } from '../utils/helpers';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 /**
  * Sidebar navigation component with smooth slide-in animation
  */
 export const Sidebar = ({ isOpen, onClose, activeTab, onTabChange }) => {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+  
+  const handleLogout = () => {
+    logout();
+    navigate('/auth');
+  };
   const handleMenuItemClick = (tab) => {
     onTabChange(tab);
     onClose();

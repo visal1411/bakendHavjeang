@@ -57,7 +57,8 @@ const CustomerHome = () => {
   const isOnline = useOnlineStatus();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('emergency');
-  const mechanics = useMechanics(searchQuery, selectedCategory);
+  const [maxDistance, setMaxDistance] = useState(null); // null = no limit, or set to 5 for 5km radius
+  const mechanics = useMechanics(searchQuery, selectedCategory, location.userLocation, maxDistance);
   const savedMechanics = useSavedMechanics();
   
   // === FEATURE HOOKS ===

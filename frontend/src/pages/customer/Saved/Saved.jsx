@@ -54,12 +54,12 @@ const Saved = () => {
     <div className="h-screen flex flex-col bg-gradient-to-b from-gray-50 to-gray-100">
       {/* Header with animation */}
       <motion.div 
-        className="bg-white border-b border-gray-100 px-4 md:px-6 py-5 md:py-7 z-30 safe-area-top shadow-sm flex-shrink-0"
+        className="bg-white border-b border-gray-100 px-4 md:px-6 py-4 md:py-6 z-30 safe-area-top shadow-sm flex-shrink-0"
         {...fadeIn}
       >
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto text-center md:text-left">
           <motion.h1 
-            className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 flex items-center gap-2"
+            className="text-xl md:text-3xl font-bold text-gray-900 mb-1.5 md:mb-2 flex items-center justify-center md:justify-start gap-2"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
@@ -68,19 +68,19 @@ const Saved = () => {
               animate={{ scale: [1, 1.2, 1] }}
               transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
             >
-              <Heart className="w-7 h-7 md:w-8 md:h-8 text-red-500 fill-red-500" />
+              <Heart className="w-6 h-6 md:w-8 md:h-8 text-red-500 fill-red-500" />
             </motion.div>
             Saved Mechanics
           </motion.h1>
           <motion.p 
-            className="text-sm md:text-base text-gray-600 flex items-center gap-2"
+            className="text-xs md:text-base text-gray-600 flex items-center justify-center md:justify-start gap-2"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
           >
             Your favorite mechanics
             {mechanics.length > 0 && (
-              <Badge variant="secondary" className="font-semibold">
+              <Badge variant="secondary" className="font-semibold text-xs">
                 {mechanics.length} saved
               </Badge>
             )}

@@ -2,6 +2,12 @@ import { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import { createCustomIcon, userLocationIcon } from '../utils/mapIcons';
 
+// Cambodia geographic boundaries
+const CAMBODIA_BOUNDS = [
+  [10.4, 102.3], // Southwest
+  [14.7, 107.6]  // Northeast
+];
+
 /**
  * Map center updater component
  */
@@ -35,6 +41,10 @@ export const InteractiveMap = ({
       zoomControl={false}
       attributionControl={false}
       scrollWheelZoom={true}
+      maxBounds={CAMBODIA_BOUNDS}
+      maxBoundsViscosity={0.8}
+      minZoom={8}
+      maxZoom={18}
     >
       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
       <MapCenterUpdater center={mapCenter} zoom={mapZoom} />

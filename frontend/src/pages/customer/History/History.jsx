@@ -12,7 +12,8 @@ import {
   Receipt,
   FileText,
   TrendingUp,
-  Award
+  Award,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
@@ -25,6 +26,7 @@ import { staggerContainer, staggerItem, fadeIn, modalContainer, modalContent, ba
 const History = () => {
   const [selectedHistory, setSelectedHistory] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [activeTab, setActiveTab] = useState('all'); // 'all', 'active', 'completed'
 
   const handleViewDetails = (item) => {
     setSelectedHistory(item);
@@ -44,30 +46,52 @@ const History = () => {
     switch (status.toLowerCase()) {
       case 'completed': return 'bg-green-100 text-green-700 border-green-200';
       case 'pending': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+      case 'accepted': return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'in-progress': return 'bg-purple-100 text-purple-700 border-purple-200';
       case 'cancelled': return 'bg-red-100 text-red-700 border-red-200';
       default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
 
+  // Filter history based on active tab
+  const filteredHistory = historyData.filter(item => {
+    if (activeTab === 'all') return true;
+    if (activeTab === 'active') {
+      return ['pending', 'accepted', 'in-progress'].includes(item.status.toLowerCase());
+    }
+    if (activeTab === 'completed') {
+      return ['completed', 'cancelled'].includes(item.status.toLowerCase());
+    }
+    return true;
+  });
+
+  const activeCount = historyData.filter(item => 
+    ['pending', 'accepted', 'in-progress'].includes(item.status.toLowerCase())
+  ).length;
+
+  const completedCount = historyData.filter(item => 
+    ['completed', 'cancelled'].includes(item.status.toLowerCase())
+  ).length;
+
   return (
     <div className="h-screen flex flex-col bg-gradient-to-b from-gray-50 to-gray-100">
       {/* Header with animation */}
       <motion.div 
-        className="bg-white border-b border-gray-100 px-4 md:px-6 py-5 md:py-7 z-30 safe-area-top shadow-sm flex-shrink-0"
+        className="bg-white border-b border-gray-100 px-4 md:px-6 py-4 md:py-6 z-30 safe-area-top shadow-sm flex-shrink-0"
         {...fadeIn}
       >
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto text-center md:text-left">
           <motion.h1 
-            className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 flex items-center gap-2"
+            className="text-xl md:text-3xl font-bold text-gray-900 mb-1.5 md:mb-2 flex items-center justify-center md:justify-start gap-2"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <Receipt className="w-7 h-7 md:w-8 md:h-8 text-primary" />
+            <Receipt className="w-6 h-6 md:w-8 md:h-8 text-primary" />
             Service History
           </motion.h1>
           <motion.div 
-            className="flex items-center gap-3 text-sm md:text-base"
+            className="flex items-center justify-center md:justify-start gap-2 md:gap-3 text-xs md:text-base"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
@@ -75,8 +99,8 @@ const History = () => {
             <p className="text-gray-600">Your past mechanic services</p>
             {historyData.length > 0 && (
               <>
-                <span className="text-gray-300">•</span>
-                <Badge variant="secondary" className="font-semibold">
+                <span className="text-gray-300 hidden md:inline">•</span>
+                <Badge variant="secondary" className="font-semibold text-xs">
                   {historyData.length} {historyData.length === 1 ? 'service' : 'services'}
                 </Badge>
               </>
@@ -111,6 +135,55 @@ const History = () => {
           </motion.div>
         ) : (
           <>
+            {/* Tab Navigation */}
+            <div className="grid grid-cols-3 gap-3 mb-6">
+              <button
+                onClick={() => setActiveTab('all')}
+                className={`p-4 rounded-xl text-center transition-all border-2 ${
+                  activeTab === 'all'
+                    ? 'bg-primary text-white border-primary shadow-lg'
+                    : 'bg-white text-gray-700 border-gray-200 hover:border-primary hover:shadow-md'
+                }`}
+              >
+                <p className={`font-bold text-sm ${
+                  activeTab === 'all' ? 'text-white' : 'text-gray-900'
+                }`}>All</p>
+                <p className={`text-xs ${
+                  activeTab === 'all' ? 'text-blue-100' : 'text-gray-600'
+                }`}>{historyData.length} services</p>
+              </button>
+              <button
+                onClick={() => setActiveTab('active')}
+                className={`p-4 rounded-xl text-center transition-all border-2 ${
+                  activeTab === 'active'
+                    ? 'bg-primary text-white border-primary shadow-lg'
+                    : 'bg-white text-gray-700 border-gray-200 hover:border-primary hover:shadow-md'
+                }`}
+              >
+                <p className={`font-bold text-sm ${
+                  activeTab === 'active' ? 'text-white' : 'text-gray-900'
+                }`}>Active</p>
+                <p className={`text-xs ${
+                  activeTab === 'active' ? 'text-blue-100' : 'text-gray-600'
+                }`}>{activeCount} ongoing</p>
+              </button>
+              <button
+                onClick={() => setActiveTab('completed')}
+                className={`p-4 rounded-xl text-center transition-all border-2 ${
+                  activeTab === 'completed'
+                    ? 'bg-primary text-white border-primary shadow-lg'
+                    : 'bg-white text-gray-700 border-gray-200 hover:border-primary hover:shadow-md'
+                }`}
+              >
+                <p className={`font-bold text-sm ${
+                  activeTab === 'completed' ? 'text-white' : 'text-gray-900'
+                }`}>Completed</p>
+                <p className={`text-xs ${
+                  activeTab === 'completed' ? 'text-blue-100' : 'text-gray-600'
+                }`}>{completedCount} done</p>
+              </button>
+            </div>
+
             {/* Stats Summary */}
             <motion.div 
               className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6"
@@ -166,7 +239,13 @@ const History = () => {
               initial="initial"
               animate="animate"
             >
-              {historyData.map((item, index) => (
+              {filteredHistory.length === 0 ? (
+                <div className="text-center py-12 bg-white rounded-2xl">
+                  <CheckCircle2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-600 font-medium">No {activeTab} services</p>
+                </div>
+              ) : (
+                filteredHistory.map((item, index) => (
                 <motion.div key={item.id} variants={staggerItem}>
                   <motion.div
                     whileHover={{ scale: 1.02, y: -2 }}
@@ -266,7 +345,8 @@ const History = () => {
                     </Card>
                   </motion.div>
                 </motion.div>
-              ))}
+              )))
+              }
             </motion.div>
           </>
         )}
@@ -304,7 +384,7 @@ const History = () => {
                       onClick={() => setShowDetails(false)}
                       className="hover:bg-gray-100"
                     >
-                      ✕
+                      <X className="w-5 h-5" />
                     </Button>
                   </motion.div>
                 </div>

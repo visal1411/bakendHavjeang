@@ -234,3 +234,130 @@ export const savedMechanics = [
     savedDate: "2025-10-10",
   },
 ];
+
+// Service requests data for mechanic dashboard
+export const serviceRequests = [
+  {
+    id: 1,
+    customerName: "Chan Dara",
+    customerPhone: "+855 12 987 654",
+    serviceType: "Tire Replacement",
+    vehicleType: "Car",
+    vehicleMake: "Toyota Camry",
+    status: "pending", // pending, accepted, in-progress, completed, declined
+    priority: "normal", // normal, urgent, emergency
+    distance: 1.2,
+    estimatedTripFee: 2.4,
+    requestedAt: "2026-01-20T09:30:00",
+    description: "Front right tire is flat. Need replacement urgently.",
+    location: {
+      address: "St 271, Phnom Penh",
+      lat: 11.5564,
+      lng: 104.9282,
+    },
+  },
+  {
+    id: 2,
+    customerName: "Sok Vibol",
+    customerPhone: "+855 12 345 987",
+    serviceType: "Battery Jump Start",
+    vehicleType: "Moto",
+    vehicleMake: "Honda Wave",
+    status: "accepted",
+    priority: "urgent",
+    distance: 0.5,
+    estimatedTripFee: 1.0,
+    requestedAt: "2026-01-20T08:15:00",
+    acceptedAt: "2026-01-20T08:17:00",
+    description: "Battery died, won't start. Please hurry!",
+    location: {
+      address: "Russian Blvd, Phnom Penh",
+      lat: 11.565,
+      lng: 104.915,
+    },
+  },
+  {
+    id: 3,
+    customerName: "Phalla Kim",
+    customerPhone: "+855 12 654 321",
+    serviceType: "Engine Diagnosis",
+    vehicleType: "Car",
+    vehicleMake: "Hyundai Elantra",
+    status: "in-progress",
+    priority: "normal",
+    distance: 0.8,
+    estimatedTripFee: 1.6,
+    serviceFee: 35.0,
+    requestedAt: "2026-01-20T07:45:00",
+    acceptedAt: "2026-01-20T07:50:00",
+    arrivedAt: "2026-01-20T08:05:00",
+    description: "Engine making strange noise, check engine light is on.",
+    location: {
+      address: "Monivong Blvd, Phnom Penh",
+      lat: 11.5449,
+      lng: 104.922,
+    },
+  },
+  {
+    id: 4,
+    customerName: "Ratha Chea",
+    customerPhone: "+855 12 111 222",
+    serviceType: "Emergency Roadside",
+    vehicleType: "Car",
+    vehicleMake: "Lexus RX350",
+    status: "completed",
+    priority: "emergency",
+    distance: 2.1,
+    estimatedTripFee: 4.2,
+    serviceFee: 25.0,
+    totalAmount: 29.2,
+    requestedAt: "2026-01-19T18:30:00",
+    acceptedAt: "2026-01-19T18:32:00",
+    arrivedAt: "2026-01-19T18:50:00",
+    completedAt: "2026-01-19T19:35:00",
+    description: "Car broke down on highway, need towing assistance.",
+    location: {
+      address: "National Road 1, Phnom Penh",
+      lat: 11.528,
+      lng: 104.92,
+    },
+    rating: 5,
+    review: "Very professional and quick response! Highly recommended.",
+  },
+];
+
+// Earnings data for mechanic
+export const earningsData = {
+  today: {
+    amount: 89.5,
+    jobs: 4,
+  },
+  thisWeek: {
+    amount: 456.75,
+    jobs: 18,
+  },
+  thisMonth: {
+    amount: 1842.25,
+    jobs: 67,
+  },
+  breakdown: [
+    { date: "2026-01-20", amount: 89.5, jobs: 4 },
+    { date: "2026-01-19", amount: 125.0, jobs: 5 },
+    { date: "2026-01-18", amount: 67.25, jobs: 3 },
+    { date: "2026-01-17", amount: 98.0, jobs: 4 },
+    { date: "2026-01-16", amount: 77.0, jobs: 2 },
+  ],
+};
+
+// Mechanic statistics
+export const mechanicStats = {
+  totalJobs: 234,
+  completedJobs: 218,
+  cancelledJobs: 8,
+  rating: 4.8,
+  totalReviews: 127,
+  totalEarnings: 8945.5,
+  responseTime: "~5 min",
+  completionRate: 93.2,
+  availabilityHours: "08:00 - 18:00",
+};

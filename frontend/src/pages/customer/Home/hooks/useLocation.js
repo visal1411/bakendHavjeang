@@ -27,6 +27,7 @@ export const useLocation = () => {
 
   useEffect(() => {
     let isMounted = true;
+    let watchId = null;
 
     const requestLocation = () => {
       if (!("geolocation" in navigator)) {
@@ -36,8 +37,10 @@ export const useLocation = () => {
       }
 
       console.log("📍 Requesting location from browser...");
+      console.log("🌐 Protocol:", window.location.protocol);
+      console.log("📱 User Agent:", navigator.userAgent);
 
-      // Direct geolocation request - triggers native browser prompt
+      // First try to get current position
       navigator.geolocation.getCurrentPosition(
         // Success callback
         (position) => {
@@ -51,6 +54,34 @@ export const useLocation = () => {
             "✅ Location access granted:",
             `${userPos[0].toFixed(4)}, ${userPos[1].toFixed(4)}`,
             `(±${Math.round(position.coords.accuracy)}m)`
+          );
+
+          // Start watching position for live updates
+          watchId = navigator.geolocation.watchPosition(
+            (position) => {
+              if (!isMounted) return;
+              const newPos = [
+                position.coords.latitude,
+                position.coords.longitude,
+              ];
+              setUserLocation(newPos);
+              console.log(
+                "🔄 Location updated:",
+                `${newPos[0].toFixed(4)}, ${newPos[1].toFixed(4)}`
+              );
+            },
+            (error) => {
+              console.warn(
+                "⚠️ Watch position error:",
+                error.code,
+                error.message
+              );
+            },
+            {
+              enableHighAccuracy: true,
+              maximumAge: 5000,
+              timeout: 10000,
+            }
           );
         },
         // Error callback
@@ -72,9 +103,13 @@ export const useLocation = () => {
               break;
             case 2:
               console.log("📡 Position unavailable - GPS signal issue");
+              console.log(
+                "💡 Make sure location services are enabled on your device"
+              );
               break;
             case 3:
               console.log("⏱️ Location request timeout");
+              console.log("💡 Try moving to an area with better GPS signal");
               break;
           }
 
@@ -83,7 +118,7 @@ export const useLocation = () => {
         // Options
         {
           enableHighAccuracy: true, // Request GPS
-          timeout: 10000, // 10 second timeout
+          timeout: 15000, // 15 second timeout (longer for mobile)
           maximumAge: 0, // Don't use cached position
         }
       );
@@ -107,6 +142,10 @@ export const useLocation = () => {
 
     return () => {
       isMounted = false;
+      if (watchId) {
+        navigator.geolocation.clearWatch(watchId);
+        console.log("🛑 Stopped watching location");
+      }
     };
   }, []);
 
