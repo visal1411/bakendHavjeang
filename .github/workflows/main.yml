@@ -7,8 +7,8 @@ on:
     branches: [ "main", "dev" ]
 
 jobs:
-  test-environment:
-    runs-on: ubuntu-server
+  run-containers:
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
