@@ -19,7 +19,3 @@ jobs:
 
       - name: Check running containers
         run: docker ps
-
-      - name: Stop containers
-        if: always()
-        run: docker compose down
