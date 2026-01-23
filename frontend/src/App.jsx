@@ -39,16 +39,28 @@ import RoleBasedRoute from './components/shared/RoleBasedRoute';
 
 // Root redirect component - handles initial navigation
 const RootRedirect = () => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, isLoading } = useAuth();
+
+  // Show loading while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/auth" replace />;
   }
 
   // Redirect based on user role
-  if (user.role === 'customer') {
+  if (user?.role === 'customer') {
     return <Navigate to="/customer/home" replace />;
-  } else if (user.role === 'mechanic') {
+  } else if (user?.role === 'mechanic') {
     return <Navigate to="/mechanic/dashboard" replace />;
   }
 
