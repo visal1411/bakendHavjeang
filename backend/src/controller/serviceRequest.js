@@ -1,129 +1,73 @@
-import { prisma } from "../config/db.js"
-import { calculateTripAndTotalPrice } from "../service/pricingService.js"
-//
+// src/controller/serviceRequest.js
+import { prisma } from "../config/db.js";
+import { calculateTripPrice, calculateTotalPrice, calculateUnknownTotal } from "../service/pricingService.js";
+import { notifyMechanic, notifyCustomer } from "../service/socketService.js";
+import { sendPushToUser } from "../service/pushService.js";
+
 // ============================
 // CUSTOMER: Create service request
 // ============================
-//
-import { getDistanceKmORS } from "../service/distance/orsDistance.js"
-
-export const getNearbyMechanics = async (req, res) => {
-  try {
-    const { lat, lng } = req.query
-
-    if (!lat || !lng) {
-      return res.status(400).json({ message: "Location required" })
-    }
-
-    const customerLocation = {
-      lat: Number(lat),
-      lng: Number(lng)
-    }
-
-    const mechanics = await prisma.user.findMany({
-      where: {
-        usertype: "mechanic",
-        mechanic_lat: { not: null },
-        mechanic_lng: { not: null }
-      },
-      select: {
-        id: true,
-        name: true,
-        phone: true,
-        mechanic_lat: true,
-        mechanic_lng: true,
-        service: true
-      }
-    })
-
-    const MAX_DISTANCE_KM = 5
-
-    const mechanicsWithDistance = await Promise.all(
-      mechanics.map(async (m) => {
-        const mechanicLocation = {
-          lat: m.mechanic_lat,
-          lng: m.mechanic_lng
-        }
-
-        try {
-          const distanceKm = await getDistanceKmORS(
-            customerLocation,
-            mechanicLocation
-          )
-
-          return {
-            ...m,
-            distanceKm
-          }
-        } catch (err) {
-          // If ORS fails for one mechanic, we skip them
-          return null
-        }
-      })
-    )
-
-    const nearby = mechanicsWithDistance
-      .filter(m => m && m.distanceKm <= MAX_DISTANCE_KM)
-      .sort((a, b) => a.distanceKm - b.distanceKm)
-
-    res.json(nearby)
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ message: "Server error" })
-  }
-}
-
-
 export const createServiceRequest = async (req, res) => {
   try {
-    const customerId = req.user.id
-    const { serviceIds, description, address, request_lng, request_lat } = req.body
+    const customerId = req.user.id;
+    const { serviceIds, mechanicId, description, address, request_lat, request_lng } = req.body;
 
-    if (
-      !Array.isArray(serviceIds) ||
-      !serviceIds.length ||
-      !address ||
-      request_lat === undefined ||
-      request_lng === undefined
-    ) {
-      return res.status(400).json({ message: "Missing required fields" })
+    if (!address || request_lat == null || request_lng == null) {
+      return res.status(400).json({ message: "Missing required fields" });
     }
 
-    const services = await prisma.service.findMany({
-      where: { id: { in: serviceIds } },
-      include: {
-        mechanic: {
-          select: {
-            mechanic_lat: true,
-            mechanic_lng: true
-          }
-        }
-      }
-    })
+    const customerLocation = { lat: request_lat, lng: request_lng };
+    let mechanic = null;
+    let services = [];
 
-    if (!services.length) {
-      return res.status(400).json({ message: "Selected services not found" })
+    // KNOWN SERVICE FLOW
+    if (Array.isArray(serviceIds) && serviceIds.length) {
+      services = await prisma.service.findMany({
+        where: { id: { in: serviceIds } },
+        include: { mechanic: true }
+      });
+
+      if (!services.length)
+        return res.status(400).json({ message: "Services not found" });
     }
 
-    for (const s of services) {
-      if (s.mechanic.mechanic_lat == null || s.mechanic.mechanic_lng == null) {
-        return res.status(400).json({
-          message: `Mechanic location missing for service ID ${s.id}`
-        })
-      }
+    // UNKNOWN SERVICE FLOW
+    if (mechanicId) {
+      mechanic = await prisma.user.findUnique({ where: { id: mechanicId } });
+      if (!mechanic || mechanic.usertype !== "mechanic")
+        return res.status(404).json({ message: "Mechanic not found" });
     }
 
-    const customerLocation = {
-      lat: request_lat,
-      lng: request_lng
+    // If no mechanic selected yet, pick first mechanic from known services
+    if (!mechanic && services.length > 0) {
+      mechanic = services[0].mechanic;
     }
 
-    const { tripDistanceKm, tripPrice, totalPrice } =
-      await calculateTripAndTotalPrice(customerLocation, services)
+    if (!mechanic)
+      return res.status(400).json({ message: "Mechanic is required" });
+
+    // PRICE CALCULATION
+    const { tripDistanceKm, tripPrice } = await calculateTripPrice(customerLocation, {
+      lat: mechanic.mechanic_lat,
+      lng: mechanic.mechanic_lng
+    });
+
+    let totalPrice = services.length
+      ? calculateTotalPrice(tripPrice, services)
+      : 0;
+    
+    console.log("DEBUG PRICES:", {
+  mechanicLat: mechanic.mechanic_lat,
+  mechanicLng: mechanic.mechanic_lng,
+  tripDistanceKm,
+  tripPrice,
+  isTripPriceNaN: Number.isNaN(tripPrice)
+});
 
     const request = await prisma.serviceRequest.create({
       data: {
-        customerId,
+        customer: { connect: { id: customerId } },
+        mechanic: { connect: { id: mechanic.id } },
         description,
         address,
         request_lat,
@@ -131,117 +75,161 @@ export const createServiceRequest = async (req, res) => {
         trip_price: tripPrice,
         total_price: totalPrice,
         status: "pending",
-        service: {
-          connect: serviceIds.map(id => ({ id }))
-        }
+        service: services.length
+          ? { connect: serviceIds.map(id => ({ id })) }
+          : undefined
       },
-      include: { service: true }
-    })
-
-    res.status(201).json({
-      ...request,
-      tripDistanceKm,
-      tripPrice,
-      totalPrice
-    })
-  } catch (error) {
-    console.error("Service request creation error:", error)
-    res.status(500).json({ message: error.message })
-  }
-}
-
-//
-// ============================
-// CUSTOMER: Get my service requests
-// ============================
-//
-
-export const getMyRequests = async (req, res) => {
-  try {
-    const customerId = req.user.id
-
-    const requests = await prisma.serviceRequest.findMany({
-      where: { customerId },
-      include: {
-        service: {
-          include: {
-            mechanic: {
-              select: {
-                id: true,
-                name: true,
-                phone: true
-              }
-            }
+      include: { 
+        service: true,
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            phone: true
           }
         }
-      },
-      orderBy: {
-        request_date: "desc"
       }
-    })
+    });
 
-    res.json(requests)
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ message: "Server error" })
+    const notificationPayload = {
+      message: 'You have a new service request',
+      request: {
+        id: request.id,
+        customer: request.customer,
+        description: request.description,
+        address: request.address,
+        request_lat: request.request_lat,
+        request_lng: request.request_lng,
+        trip_price: request.trip_price,
+        total_price: request.total_price,
+        status: request.status,
+        service: request.service,
+        request_date: request.request_date
+      }
+    };
+
+    // Notify mechanic via WebSocket
+    notifyMechanic(mechanic.id, 'new_service_request', notificationPayload);
+
+    // Notify mechanic via Web Push
+    await sendPushToUser(mechanic.id, {
+      type: 'new_service_request',
+      title: 'New service request',
+      body: `You have a new service request from ${request.customer.name}`,
+      data: {
+        requestId: request.id,
+        customerId: request.customer.id
+      }
+    });
+
+    res.status(201).json({ request, tripDistanceKm });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
-}
+};
 
-//
 // ============================
-// CUSTOMER: Cancel service request
+// CUSTOMER: Accept proposed price
 // ============================
-//
-export const cancelServiceRequest = async (req, res) => {
+export const acceptProposedPrice = async (req, res) => {
   try {
-    const customerId = req.user.id
-    const requestId = Number(req.params.id)
+    const customerId = req.user.id;
+    const requestId = Number(req.params.id);
 
-    const request = await prisma.serviceRequest.findUnique({
-      where: { id: requestId }
-    })
+    const request = await prisma.serviceRequest.findUnique({ where: { id: requestId } });
+    if (!request || request.customerId !== customerId)
+      return res.status(403).json({ message: "Not allowed" });
+    if (!request.proposed_price) return res.status(400).json({ message: "No price proposed yet" });
 
-    if (!request) {
-      return res.status(404).json({
-        message: "Service request not found"
-      })
-    }
+    const totalPrice = calculateUnknownTotal(request.trip_price, request.proposed_price);
 
-    if (request.customerId !== customerId) {
-      return res.status(403).json({
-        message: "You are not allowed to cancel this request"
-      })
-    }
-
-    if (request.status !== "pending") {
-      return res.status(400).json({
-        message: "Only pending requests can be cancelled"
-      })
-    }
-
-    const updatedRequest = await prisma.serviceRequest.update({
+    const updated = await prisma.serviceRequest.update({
       where: { id: requestId },
-      data: { status: "cancelled" }
-    })
+      data: { customerApproved: true, total_price: totalPrice, status: "accepted" }
+    });
+    
+    // Notify mechanic via WebSocket
+    notifyMechanic(request.mechanicId, 'price_accepted', {
+      message: 'Customer accepted your proposed price',
+      request: {
+        id: updated.id,
+        status: updated.status,
+        total_price: updated.total_price
+      }
+    });
 
+    // Notify mechanic via Web Push
+    if (request.mechanicId) {
+      await sendPushToUser(request.mechanicId, {
+        type: 'price_accepted',
+        title: 'Price accepted',
+        body: 'The customer accepted your proposed price.',
+        data: {
+          requestId: updated.id,
+          customerId
+        }
+      });
+    }
 
-    res.json({
-      message: "Service request cancelled successfully",
-      request: updatedRequest
-    })
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ message: "Server error" })
+    res.json({ message: "Price accepted", request: updated });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
-}
+};
 
+// ============================
+// CUSTOMER: Decline proposed price
+// ============================
+export const declineProposedPrice = async (req, res) => {
+  try {
+    const customerId = req.user.id;
+    const requestId = Number(req.params.id);
+    const request = await prisma.serviceRequest.findUnique({ where: { id: requestId } });
+    if (!request || request.customerId !== customerId)
+      return res.status(403).json({ message: "Not allowed" });
 
-// customer view mehcanic's services
-// ================= GET MECHANIC BY ID =================
+    const updated = await prisma.serviceRequest.update({
+      where: { id: requestId },
+      data: { customerApproved: false, status: "cancelled" }
+    });
+    
+    // Notify mechanic via WebSocket
+    notifyMechanic(request.mechanicId, 'price_declined', {
+      message: 'Customer declined your proposed price',
+      request: {
+        id: updated.id,
+        status: updated.status
+      }
+    });
+
+    // Notify mechanic via Web Push
+    if (request.mechanicId) {
+      await sendPushToUser(request.mechanicId, {
+        type: 'price_declined',
+        title: 'Price declined',
+        body: 'The customer declined your proposed price.',
+        data: {
+          requestId: updated.id,
+          customerId
+        }
+      });
+    }
+
+    res.json({ message: "Price declined", request: updated });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ============================p
+// CUSTOMER: Get mechanic info
+// ============================
 export const getMechanicById = async (req, res) => {
   try {
-    const { id } = req.params
-
+    const { id } = req.params;
     const mechanic = await prisma.user.findUnique({
       where: { id: Number(id) },
       select: {
@@ -253,178 +241,352 @@ export const getMechanicById = async (req, res) => {
         mechanic_lng: true,
         working_hours: true
       }
-    })
+    });
 
-    if (!mechanic || mechanic.usertype.toLowerCase() !== "mechanic") {
-      return res.status(404).json({ message: "Mechanic not found" })
+    if (!mechanic || mechanic.usertype !== "mechanic") {
+      return res.status(404).json({ message: "Mechanic not found" });
     }
 
-    res.status(200).json({
-      message: "Mechanic fetched successfully",
-      mechanic
-    })
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ message: "Server error" })
+    res.status(200).json({ message: "Mechanic fetched successfully", mechanic });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
-}
+};
 
-
-// // GET /service/mechanic/:mechanicId
+// ============================
+// CUSTOMER: Get all services by a mechanic
+// ============================
 export const getServicesByMechanic = async (req, res) => {
   try {
-    const mechanicId = parseInt(req.params.mechanicId, 10)
-
-    const services = await prisma.service.findMany({
-      where: { mechanicId }
-    })
-
-    res.json(services)
-  } catch (error) {
-    res.status(500).json({ message: "Server error" })
+    const mechanicId = Number(req.params.mechanicId);
+    const services = await prisma.service.findMany({ where: { mechanicId } });
+    res.json(services);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
-}
+};
 
-
-//
 // ============================
-// MECHANIC: View incoming service requests
+// CUSTOMER: Get my requests
 // ============================
-//
-export const getIncomingRequests = async (req, res) => {
+export const getMyRequests = async (req, res) => {
   try {
-    const mechanicId = req.user.id
-
+    const customerId = req.user.id;
     const requests = await prisma.serviceRequest.findMany({
-      where: {
-        service: {
-          some: {
-            mechanicId
-          }
-        },
-        status: "pending"
-      },
-      include: {
-        customer: {
-          select: { id: true, name: true, phone: true }
-        },
-        service: true
-      },
-      orderBy: { request_date: "asc" }
-    })
+      where: { customerId },
+      include: { service: true },
+      orderBy: { request_date: "desc" }
+    });
+    res.json(requests);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
 
-    if (requests.length === 0) {
-      return res.json({ message: "No incoming service requests", data: [] })
+// ============================
+// CUSTOMER: Cancel request
+// ============================
+export const cancelServiceRequest = async (req, res) => {
+  try {
+    const customerId = req.user.id;
+    const requestId = Number(req.params.id);
+
+    const request = await prisma.serviceRequest.findUnique({ where: { id: requestId } });
+    if (!request) return res.status(404).json({ message: "Service request not found" });
+    if (request.customerId !== customerId) return res.status(403).json({ message: "Not allowed" });
+    if (request.status !== "pending") return res.status(400).json({ message: "Only pending requests can be cancelled" });
+
+    const updatedRequest = await prisma.serviceRequest.update({
+      where: { id: requestId },
+      data: { status: "cancelled" }
+    });
+    
+    // Notify mechanic that customer cancelled, if mechanic assigned
+    if (request.mechanicId) {
+      notifyMechanic(request.mechanicId, 'request_cancelled', {
+        message: 'Customer cancelled the service request',
+        request: {
+          id: updatedRequest.id,
+          status: updatedRequest.status
+        }
+      });
+
+      await sendPushToUser(request.mechanicId, {
+        type: 'request_cancelled',
+        title: 'Request cancelled',
+        body: 'The customer cancelled the service request.',
+        data: {
+          requestId: updatedRequest.id,
+          customerId
+        }
+      });
     }
 
-    res.json(requests)
-
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ message: "no service requests found" })
+    res.json({ message: "Service request cancelled successfully", request: updatedRequest });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
-}
-
-//
+};// ============================
+// CUSTOMER: Get nearby mechanics
 // ============================
-// MECHANIC: Complete service request
-// ============================
-//
-export const completeServiceRequest = async (req, res) => {
+export const getNearbyMechanics = async (req, res) => {
   try {
-    const mechanicId = req.user.id
-    const requestId = Number(req.params.id)
+    const { lat, lng } = req.query;
+    if (!lat || !lng) return res.status(400).json({ message: "Location required" });
+
+    const customerLocation = { lat: Number(lat), lng: Number(lng) };
+    const mechanics = await prisma.user.findMany({
+      where: { usertype: "mechanic", mechanic_lat: { not: null }, mechanic_lng: { not: null } },
+      select: { id: true, name: true, phone: true, mechanic_lat: true, mechanic_lng: true }
+    });
+
+    res.json(mechanics);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ============================
+// MECHANIC: View incoming requests
+// ============================
+export const getIncomingRequests = async (req, res) => {
+  try {
+    const mechanicId = req.user.id;
+    const requests = await prisma.serviceRequest.findMany({
+      where: {
+        OR: [
+          { service: { some: { mechanicId } } },
+          { service: { none: {} }, OR: [ { mechanicId }, { mechanicId: null } ] }
+        ],
+        status: "pending"
+      },
+      include: { customer: true, service: true },
+      orderBy: { request_date: "asc" }
+    });
+    res.json(requests);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ============================
+// MECHANIC: Accept request
+// ============================
+export const acceptServiceRequest = async (req, res) => {
+  try {
+    const mechanicId = req.user.id;
+    const requestId = Number(req.params.id);
 
     const request = await prisma.serviceRequest.findUnique({
       where: { id: requestId },
       include: { service: true }
-    })
+    });
 
-    if (!request) {
-      return res.status(404).json({
-        message: "Service request not found"
-      })
-    }
-    const isAllowed = request.service.some(
-      s => s.mechanicId === mechanicId
-    )
+    if (!request) return res.status(404).json({ message: "Request not found" });
+    if (request.status !== "pending") return res.status(400).json({ message: "Only pending requests can be accepted" });
 
-    if (!isAllowed) {
-      return res.status(403).json({
-        message: "You are not allowed to update this request"
-      })
-    }
+    const canAccept = !request.service.length || request.service.some(s => s.mechanicId === mechanicId);
+    if (!canAccept) return res.status(403).json({ message: "You are not allowed to accept this request" });
 
-    if (request.status !== "accepted") {
-      return res.status(400).json({
-        message: "Only accepted requests can be completed"
-      })
-    }
+    const updatedRequest = await prisma.serviceRequest.update({
+      where: { id: requestId },
+      data: { status: "accepted" },
+      include: {
+        service: true,
+        mechanic: {
+          select: {
+            id: true,
+            name: true,
+            phone: true
+          }
+        }
+      }
+    });
 
+    const notificationPayload = {
+      message: 'Your service request has been accepted by the mechanic',
+      request: {
+        id: updatedRequest.id,
+        status: updatedRequest.status,
+        mechanic: updatedRequest.mechanic,
+        service: updatedRequest.service
+      }
+    };
+
+    // Notify customer via WebSocket
+    notifyCustomer(request.customerId, 'request_accepted', notificationPayload);
+
+    // Notify customer via Web Push
+    await sendPushToUser(request.customerId, {
+      type: 'request_accepted',
+      title: 'Request accepted',
+      body: 'Your service request has been accepted by the mechanic.',
+      data: {
+        requestId: updatedRequest.id,
+        mechanicId
+      }
+    });
+
+    res.json({ message: "Request accepted", request: updatedRequest });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ============================
+// MECHANIC: Reject request
+// ============================
+export const rejectServiceRequest = async (req, res) => {
+  try {
+    const mechanicId = req.user.id;
+    const requestId = Number(req.params.id);
+
+    const request = await prisma.serviceRequest.findUnique({
+      where: { id: requestId },
+      include: { service: true }
+    });
+
+    if (!request) return res.status(404).json({ message: "Request not found" });
+    if (request.status !== "pending") return res.status(400).json({ message: "Only pending requests can be rejected" });
+
+    const canReject = !request.service.length || request.service.some(s => s.mechanicId === mechanicId);
+    if (!canReject) return res.status(403).json({ message: "You are not allowed to reject this request" });
+
+    const updatedRequest = await prisma.serviceRequest.update({
+      where: { id: requestId },
+      data: { status: "cancelled" },
+      include: {
+        service: true,
+        mechanic: {
+          select: {
+            id: true,
+            name: true,
+            phone: true
+          }
+        }
+      }
+    });
+
+    const notificationPayload = {
+      message: 'Your service request has been rejected by the mechanic',
+      request: {
+        id: updatedRequest.id,
+        status: updatedRequest.status,
+        mechanic: updatedRequest.mechanic,
+        service: updatedRequest.service
+      }
+    };
+
+    // Notify customer via WebSocket
+    notifyCustomer(request.customerId, 'request_rejected', notificationPayload);
+
+    // Notify customer via Web Push
+    await sendPushToUser(request.customerId, {
+      type: 'request_rejected',
+      title: 'Request rejected',
+      body: 'Your service request has been rejected by the mechanic.',
+      data: {
+        requestId: updatedRequest.id,
+        mechanicId
+      }
+    });
+
+    res.json({ message: "Request rejected", request: updatedRequest });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ============================
+// MECHANIC: Complete request
+// ============================
+export const completeServiceRequest = async (req, res) => {
+  try {
+    const mechanicId = req.user.id;
+    const requestId = Number(req.params.id);
+
+    const request = await prisma.serviceRequest.findUnique({
+      where: { id: requestId },
+      include: { service: true }
+    });
+
+    if (!request) return res.status(404).json({ message: "Request not found" });
+    if (request.status !== "accepted") return res.status(400).json({ message: "Only accepted requests can be completed" });
+
+    const isAllowed = !request.service.length || request.service.some(s => s.mechanicId === mechanicId);
+    if (!isAllowed) return res.status(403).json({ message: "You are not allowed to complete this request" });
 
     const updatedRequest = await prisma.serviceRequest.update({
       where: { id: requestId },
       data: { status: "completed" }
-    })
+    });
 
-    res.json({
-      message: "Service request completed successfully",
-      request: updatedRequest
-    })
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ message: "Server error" })
+    res.json({ message: "Request completed", request: updatedRequest });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
-}
+};
 
-//
 // ============================
-// MECHANIC: Accept service request
+// MECHANIC: Propose price
 // ============================
-//
-export const acceptServiceRequest = async (req, res) => {
+export const proposeServicePrice = async (req, res) => {
   try {
-    const mechanicId = req.user.id
-    const requestId = Number(req.params.id)
+    const mechanicId = req.user.id;
+    const requestId = Number(req.params.id);
+    const { proposed_price } = req.body;
+
+    if (!proposed_price || proposed_price <= 0) {
+      return res.status(400).json({ message: "Invalid price" });
+    }
 
     const request = await prisma.serviceRequest.findUnique({
       where: { id: requestId },
-      include: { service: true },
-    })
+      include: { service: true }
+    });
+    if (!request) return res.status(404).json({ message: "Request not found" });
+    if (request.status !== "accepted") return res.status(400).json({ message: "Price can only be proposed for accepted requests" });
 
-    if (!request) {
-      return res.status(404).json({ message: "Service request not found" })
-    }
-
-    if (request.status !== "pending") {
-      return res.status(400).json({
-        message: "Only pending requests can be accepted"
-      })
-    }
-
-    // Ensure this request belongs to this mechanic
-    const belongsToMechanic = request.service.some(
-      s => s.mechanicId === mechanicId
-    )
-
-    if (!belongsToMechanic) {
-      return res.status(403).json({
-        message: "You are not allowed to accept this request"
-      })
-    }
+    const canPropose = !request.service.length || request.service.some(s => s.mechanicId === mechanicId);
+    if (!canPropose) return res.status(403).json({ message: "You are not allowed to propose price for this request" });
 
     const updatedRequest = await prisma.serviceRequest.update({
       where: { id: requestId },
-      data: { status: "accepted" }
-    })
+      data: { proposed_price, customerApproved: null }
+    });
+    
+    // Notify customer via WebSocket
+    notifyCustomer(request.customerId, 'price_proposed', {
+      message: 'Mechanic proposed a new price',
+      request: {
+        id: updatedRequest.id,
+        proposed_price: updatedRequest.proposed_price
+      }
+    });
 
-    res.json({
-      message: "Service request accepted",
-      request: updatedRequest
-    })
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ message: "Server error" })
+    // Notify customer via Web Push
+    await sendPushToUser(request.customerId, {
+      type: 'price_proposed',
+      title: 'New price proposed',
+      body: 'Your mechanic has proposed a new price for your service request.',
+      data: {
+        requestId: updatedRequest.id,
+        mechanicId
+      }
+    });
+
+    res.json({ message: "Price proposed successfully", request: updatedRequest });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
-}
-
+};

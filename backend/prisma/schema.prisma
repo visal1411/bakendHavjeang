@@ -26,6 +26,9 @@ model User {
 
   service         Service[]        // services mechanic provides
   serviceRequests  ServiceRequest[] // requests customer made
+  assignedRequests ServiceRequest[] @relation("MechanicOnRequest") // <-- NEW: unknown service requests assigned to mechanic
+
+  pushSubscriptions PushSubscription[]
 }
 
 model Service {
@@ -50,16 +53,35 @@ model ServiceRequest {
   address      String           @db.VarChar(255)
   request_lat  Float
   request_lng  Float
-  trip_price  Int
-  total_price  Int
+  trip_price   Int
+  total_price    Int? @default(0)   // ✅ FIX HERE
+  proposed_price Int?           // <-- NEW: price mechanic proposes for unknown service
+  customerApproved Boolean?      // <-- NEW: whether customer approved proposed price
 
   customerId   Int
   customer     User             @relation(fields: [customerId], references: [id])
 
-  service     Service[]        @relation("ServiceOnRequest") // many-to-many
+  mechanicId   Int?             // <-- NEW: assigned mechanic for unknown service
+  mechanic     User?            @relation("MechanicOnRequest", fields: [mechanicId], references: [id])
+
+  service     Service[]         @relation("ServiceOnRequest") // many-to-many
 
   @@index([customerId])
+  @@index([mechanicId])         // optional index for performance
 }
+
+model PushSubscription {
+  id        Int      @id @default(autoincrement())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
 
 
 // =====================
@@ -67,11 +89,13 @@ model ServiceRequest {
 // =====================
 
 enum RequestStatus {
-  pending
+  pending       // initial request created by customer
+  proposed      // mechanic proposed a price for unknown service
+  accepted      // customer/logic confirmed total price
   completed
   cancelled
-  accepted
 }
+
 
 enum ServiceType {
   moto

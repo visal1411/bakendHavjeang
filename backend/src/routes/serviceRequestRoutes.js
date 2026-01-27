@@ -10,47 +10,71 @@ import {
   completeServiceRequest,
   getNearbyMechanics,
   acceptServiceRequest,
+  rejectServiceRequest,
   getMechanicById,
-  getServicesByMechanic
-
+  getServicesByMechanic,
+  acceptProposedPrice,
+  declineProposedPrice,
+  proposeServicePrice
 } from "../controller/serviceRequest.js";
 
-const serviceRequestRoutes = express.Router();
+const router = express.Router();
 
 // =====================
 // CUSTOMER ROUTES
 // =====================
+const customerRouter = express.Router();
 
-// Customer creates service request
-serviceRequestRoutes.post("/", authenticateToken, isCustomer, createServiceRequest);
+customerRouter.use(authenticateToken, isCustomer);
 
-// Customer views own requests
-serviceRequestRoutes.get("/my", authenticateToken, isCustomer, getMyRequests);
+// Create service request (known or unknown)
+customerRouter.post("/", createServiceRequest);
 
-// Customer cancels request
-serviceRequestRoutes.patch("/:id/cancel", authenticateToken, isCustomer, cancelServiceRequest);
+// View own requests
+customerRouter.get("/my", getMyRequests);
 
-// Customer gets nearby shop
-serviceRequestRoutes.get("/nearby", authenticateToken, isCustomer, getNearbyMechanics);
+// Cancel request
+customerRouter.patch("/:id/cancel", cancelServiceRequest);
 
-// Customer get mechanic info
-serviceRequestRoutes.get("/:id/info", authenticateToken, isCustomer, getMechanicById)
+// Get nearby mechanics
+customerRouter.get("/nearby", getNearbyMechanics);
 
-// Customer view all services by a mechanic
-serviceRequestRoutes.get("/:mechanicId/services", authenticateToken, isCustomer, getServicesByMechanic)
+// Get mechanic info
+customerRouter.get("/:id/info", getMechanicById);
 
+// Get all services by a mechanic
+customerRouter.get("/:mechanicId/services", getServicesByMechanic);
+
+// Accept proposed price
+customerRouter.patch("/:id/accept-price", acceptProposedPrice);
+
+// Decline proposed price
+customerRouter.patch("/:id/decline-price", declineProposedPrice);
+
+router.use("/customer", customerRouter);
 
 // =====================
 // MECHANIC ROUTES
 // =====================
+const mechanicRouter = express.Router();
 
-// Mechanic views incoming requests
-serviceRequestRoutes.get("/incoming", authenticateToken, isMechanic, getIncomingRequests);
+mechanicRouter.use(authenticateToken, isMechanic);
 
-// Mechanic completes request
-serviceRequestRoutes.patch("/:id/complete", authenticateToken, isMechanic, completeServiceRequest);
+// View incoming requests
+mechanicRouter.get("/incoming", getIncomingRequests);
 
-// Mechanic accepts request
-serviceRequestRoutes.patch("/:id/accept", authenticateToken, isMechanic, acceptServiceRequest);
+// Accept request
+mechanicRouter.patch("/:id/accept", acceptServiceRequest);
 
-export default serviceRequestRoutes;
+// Reject request
+mechanicRouter.patch("/:id/reject", rejectServiceRequest);
+
+// Complete request
+mechanicRouter.patch("/:id/complete", completeServiceRequest);
+
+// Propose service price
+mechanicRouter.patch("/:id/propose-price", proposeServicePrice);
+
+router.use("/mechanic", mechanicRouter);
+
+export default router;
