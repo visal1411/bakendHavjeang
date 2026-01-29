@@ -85,6 +85,15 @@ export const notifyUser = (userId, event, data) => {
 };
 
 /**
+ * Check if user is currently connected to Socket.IO.
+ * Used to decide WebSocket (online) vs Web Push (offline).
+ */
+export const isUserOnline = (userId) => {
+  if (userId == null) return false;
+  return userSockets.has(userId);
+};
+
+/**
  * Emit notification to all mechanics
  */
 // export const notifyAllMechanics = (event, data) => {

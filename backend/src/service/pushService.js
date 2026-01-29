@@ -111,4 +111,3 @@ export const sendPushToUser = async (userId, payload) => {
     console.error("sendPushToUser failed", err);
   }
 };
-

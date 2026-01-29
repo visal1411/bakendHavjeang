@@ -1,5 +1,5 @@
 import { prisma } from "../config/db.js";
-import { notifyCustomer, notifyMechanic } from "./socketService.js";
+import { isUserOnline, notifyCustomer, notifyMechanic } from "./socketService.js";
 import { sendPushToUser } from "./pushService.js";
 
 // Expiry duration in minutes for pending service requests.
@@ -74,17 +74,19 @@ export const startRequestExpiryScheduler = () => {
             }
           };
 
-          notifyCustomer(customer.id, "request_expired", wsPayload);
-
-          await sendPushToUser(customer.id, {
-            type: "request_expired",
-            title: "Service request expired",
-            body:
-              "Your service request has been automatically cancelled because the mechanic did not respond in time.",
-            data: {
-              requestId: id
-            }
-          });
+          if (isUserOnline(customer.id)) {
+            notifyCustomer(customer.id, "request_expired", wsPayload);
+          } else {
+            await sendPushToUser(customer.id, {
+              type: "request_expired",
+              title: "Service request expired",
+              body:
+                "Your service request has been automatically cancelled because the mechanic did not respond in time.",
+              data: {
+                requestId: id
+              }
+            });
+          }
         }
 
         // Optionally notify mechanic that the request timed out
@@ -97,17 +99,19 @@ export const startRequestExpiryScheduler = () => {
             }
           };
 
-          notifyMechanic(mechanic.id, "request_expired", wsPayloadMech);
-
-          await sendPushToUser(mechanic.id, {
-            type: "request_expired",
-            title: "Service request expired",
-            body:
-              "A pending service request assigned to you has expired due to no response in time.",
-            data: {
-              requestId: id
-            }
-          });
+          if (isUserOnline(mechanic.id)) {
+            notifyMechanic(mechanic.id, "request_expired", wsPayloadMech);
+          } else {
+            await sendPushToUser(mechanic.id, {
+              type: "request_expired",
+              title: "Service request expired",
+              body:
+                "A pending service request assigned to you has expired due to no response in time.",
+              data: {
+                requestId: id
+              }
+            });
+          }
         }
       }
     } catch (err) {

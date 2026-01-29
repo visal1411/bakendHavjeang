@@ -1,7 +1,7 @@
 // src/controller/serviceRequest.js
 import { prisma } from "../config/db.js";
 import { calculateTripPrice, calculateTotalPrice, calculateUnknownTotal } from "../service/pricingService.js";
-import { notifyMechanic, notifyCustomer } from "../service/socketService.js";
+import { notifyMechanic, notifyCustomer, isUserOnline } from "../service/socketService.js";
 import { sendPushToUser } from "../service/pushService.js";
 
 // ============================
@@ -108,19 +108,20 @@ export const createServiceRequest = async (req, res) => {
       }
     };
 
-    // Notify mechanic via WebSocket
-    notifyMechanic(mechanic.id, 'new_service_request', notificationPayload);
-
-    // Notify mechanic via Web Push
-    await sendPushToUser(mechanic.id, {
-      type: 'new_service_request',
-      title: 'New service request',
-      body: `You have a new service request from ${request.customer.name}`,
-      data: {
-        requestId: request.id,
-        customerId: request.customer.id
-      }
-    });
+    // Notify mechanic: WebSocket if online, otherwise Web Push
+    if (isUserOnline(mechanic.id)) {
+      notifyMechanic(mechanic.id, 'new_service_request', notificationPayload);
+    } else {
+      await sendPushToUser(mechanic.id, {
+        type: 'new_service_request',
+        title: 'New service request',
+        body: `You have a new service request from ${request.customer.name}`,
+        data: {
+          requestId: request.id,
+          customerId: request.customer.id
+        }
+      });
+    }
 
     res.status(201).json({ request, tripDistanceKm });
   } catch (err) {
@@ -149,27 +150,28 @@ export const acceptProposedPrice = async (req, res) => {
       data: { customerApproved: true, total_price: totalPrice, status: "accepted" }
     });
     
-    // Notify mechanic via WebSocket
-    notifyMechanic(request.mechanicId, 'price_accepted', {
-      message: 'Customer accepted your proposed price',
-      request: {
-        id: updated.id,
-        status: updated.status,
-        total_price: updated.total_price
-      }
-    });
-
-    // Notify mechanic via Web Push
+    // Notify mechanic: WebSocket if online, otherwise Web Push
     if (request.mechanicId) {
-      await sendPushToUser(request.mechanicId, {
-        type: 'price_accepted',
-        title: 'Price accepted',
-        body: 'The customer accepted your proposed price.',
-        data: {
-          requestId: updated.id,
-          customerId
-        }
-      });
+      if (isUserOnline(request.mechanicId)) {
+        notifyMechanic(request.mechanicId, 'price_accepted', {
+          message: 'Customer accepted your proposed price',
+          request: {
+            id: updated.id,
+            status: updated.status,
+            total_price: updated.total_price
+          }
+        });
+      } else {
+        await sendPushToUser(request.mechanicId, {
+          type: 'price_accepted',
+          title: 'Price accepted',
+          body: 'The customer accepted your proposed price.',
+          data: {
+            requestId: updated.id,
+            customerId
+          }
+        });
+      }
     }
 
     res.json({ message: "Price accepted", request: updated });
@@ -195,26 +197,27 @@ export const declineProposedPrice = async (req, res) => {
       data: { customerApproved: false, status: "cancelled" }
     });
     
-    // Notify mechanic via WebSocket
-    notifyMechanic(request.mechanicId, 'price_declined', {
-      message: 'Customer declined your proposed price',
-      request: {
-        id: updated.id,
-        status: updated.status
-      }
-    });
-
-    // Notify mechanic via Web Push
+    // Notify mechanic: WebSocket if online, otherwise Web Push
     if (request.mechanicId) {
-      await sendPushToUser(request.mechanicId, {
-        type: 'price_declined',
-        title: 'Price declined',
-        body: 'The customer declined your proposed price.',
-        data: {
-          requestId: updated.id,
-          customerId
-        }
-      });
+      if (isUserOnline(request.mechanicId)) {
+        notifyMechanic(request.mechanicId, 'price_declined', {
+          message: 'Customer declined your proposed price',
+          request: {
+            id: updated.id,
+            status: updated.status
+          }
+        });
+      } else {
+        await sendPushToUser(request.mechanicId, {
+          type: 'price_declined',
+          title: 'Price declined',
+          body: 'The customer declined your proposed price.',
+          data: {
+            requestId: updated.id,
+            customerId
+          }
+        });
+      }
     }
 
     res.json({ message: "Price declined", request: updated });
@@ -304,25 +307,29 @@ export const cancelServiceRequest = async (req, res) => {
       data: { status: "cancelled" }
     });
     
-    // Notify mechanic that customer cancelled, if mechanic assigned
+    // Notify mechanic: WebSocket if online, otherwise Web Push
     if (request.mechanicId) {
-      notifyMechanic(request.mechanicId, 'request_cancelled', {
+      const payload = {
         message: 'Customer cancelled the service request',
         request: {
           id: updatedRequest.id,
           status: updatedRequest.status
         }
-      });
+      };
 
-      await sendPushToUser(request.mechanicId, {
-        type: 'request_cancelled',
-        title: 'Request cancelled',
-        body: 'The customer cancelled the service request.',
-        data: {
-          requestId: updatedRequest.id,
-          customerId
-        }
-      });
+      if (isUserOnline(request.mechanicId)) {
+        notifyMechanic(request.mechanicId, 'request_cancelled', payload);
+      } else {
+        await sendPushToUser(request.mechanicId, {
+          type: 'request_cancelled',
+          title: 'Request cancelled',
+          body: 'The customer cancelled the service request.',
+          data: {
+            requestId: updatedRequest.id,
+            customerId
+          }
+        });
+      }
     }
 
     res.json({ message: "Service request cancelled successfully", request: updatedRequest });
@@ -419,19 +426,20 @@ export const acceptServiceRequest = async (req, res) => {
       }
     };
 
-    // Notify customer via WebSocket
-    notifyCustomer(request.customerId, 'request_accepted', notificationPayload);
-
-    // Notify customer via Web Push
-    await sendPushToUser(request.customerId, {
-      type: 'request_accepted',
-      title: 'Request accepted',
-      body: 'Your service request has been accepted by the mechanic.',
-      data: {
-        requestId: updatedRequest.id,
-        mechanicId
-      }
-    });
+    // Notify customer: WebSocket if online, otherwise Web Push
+    if (isUserOnline(request.customerId)) {
+      notifyCustomer(request.customerId, 'request_accepted', notificationPayload);
+    } else {
+      await sendPushToUser(request.customerId, {
+        type: 'request_accepted',
+        title: 'Request accepted',
+        body: 'Your service request has been accepted by the mechanic.',
+        data: {
+          requestId: updatedRequest.id,
+          mechanicId
+        }
+      });
+    }
 
     res.json({ message: "Request accepted", request: updatedRequest });
   } catch (err) {
@@ -484,19 +492,20 @@ export const rejectServiceRequest = async (req, res) => {
       }
     };
 
-    // Notify customer via WebSocket
-    notifyCustomer(request.customerId, 'request_rejected', notificationPayload);
-
-    // Notify customer via Web Push
-    await sendPushToUser(request.customerId, {
-      type: 'request_rejected',
-      title: 'Request rejected',
-      body: 'Your service request has been rejected by the mechanic.',
-      data: {
-        requestId: updatedRequest.id,
-        mechanicId
-      }
-    });
+    // Notify customer: WebSocket if online, otherwise Web Push
+    if (isUserOnline(request.customerId)) {
+      notifyCustomer(request.customerId, 'request_rejected', notificationPayload);
+    } else {
+      await sendPushToUser(request.customerId, {
+        type: 'request_rejected',
+        title: 'Request rejected',
+        body: 'Your service request has been rejected by the mechanic.',
+        data: {
+          requestId: updatedRequest.id,
+          mechanicId
+        }
+      });
+    }
 
     res.json({ message: "Request rejected", request: updatedRequest });
   } catch (err) {
@@ -528,6 +537,27 @@ export const completeServiceRequest = async (req, res) => {
       where: { id: requestId },
       data: { status: "completed" }
     });
+
+    // Notify customer that request is completed
+    if (isUserOnline(request.customerId)) {
+      notifyCustomer(request.customerId, 'request_completed', {
+        message: 'Your service request has been completed',
+        request: {
+          id: updatedRequest.id,
+          status: updatedRequest.status
+        }
+      });
+    } else {
+      await sendPushToUser(request.customerId, {
+        type: 'request_completed',
+        title: 'Request completed',
+        body: 'Your service request has been completed.',
+        data: {
+          requestId: updatedRequest.id,
+          mechanicId
+        }
+      });
+    }
 
     res.json({ message: "Request completed", request: updatedRequest });
   } catch (err) {
@@ -561,28 +591,32 @@ export const proposeServicePrice = async (req, res) => {
 
     const updatedRequest = await prisma.serviceRequest.update({
       where: { id: requestId },
-      data: { proposed_price, customerApproved: null }
+      data: { proposed_price, customerApproved: null, status: "proposed" }
     });
     
-    // Notify customer via WebSocket
-    notifyCustomer(request.customerId, 'price_proposed', {
+    // Notify customer: WebSocket if online, otherwise Web Push
+    const pricePayload = {
       message: 'Mechanic proposed a new price',
       request: {
         id: updatedRequest.id,
-        proposed_price: updatedRequest.proposed_price
+        proposed_price: updatedRequest.proposed_price,
+        status: updatedRequest.status
       }
-    });
+    };
 
-    // Notify customer via Web Push
-    await sendPushToUser(request.customerId, {
-      type: 'price_proposed',
-      title: 'New price proposed',
-      body: 'Your mechanic has proposed a new price for your service request.',
-      data: {
-        requestId: updatedRequest.id,
-        mechanicId
-      }
-    });
+    if (isUserOnline(request.customerId)) {
+      notifyCustomer(request.customerId, 'price_proposed', pricePayload);
+    } else {
+      await sendPushToUser(request.customerId, {
+        type: 'price_proposed',
+        title: 'New price proposed',
+        body: 'Your mechanic has proposed a new price for your service request.',
+        data: {
+          requestId: updatedRequest.id,
+          mechanicId
+        }
+      });
+    }
 
     res.json({ message: "Price proposed successfully", request: updatedRequest });
   } catch (err) {
