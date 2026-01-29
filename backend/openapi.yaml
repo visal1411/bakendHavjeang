@@ -1,0 +1,477 @@
+openapi: 3.0.3
+info:
+  title: HavJeang
+  version: 1.0.0
+  description: HavJeang API Documentation
+servers:
+  - url: http://localhost:5000/api
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+paths:
+  /auth/register:
+    post:
+      summary: Register a new user as (customer or mechanic)
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - phone
+                - password
+                - usertype
+              properties:
+                name:
+                  type: string
+                  example: "John Doe"
+                phone:
+                  type: string
+                  example: "077382567"
+                  description: Phone number must start with 0, be unique, be 8 digits or 9 digits, and only numbers.
+                password:
+                  type: string
+                  example: "12345678"
+                  description: Password must be at least 8 characters long
+                usertype:
+                  type: string
+                  enum:
+                    - customer
+                    - mechanic
+                  example: mechanic
+                  description: Customer or Mechanic (semi-case-sensitive)
+                working_hours:
+                  type: string
+                  example: "9am - 5pm"
+                  description: Required if usertype is mechanic, start must be before end, and format must be in hh:mm - hh:mm
+                mechanic_lat:
+                  type: number
+                  format: float
+                  example: 11.562108
+                  description: Required if usertype is mechanic
+                mechanic_lng:
+                  type: number
+                  format: float
+                  example: 104.888535
+                  description: Required if usertype is mechanic
+      responses:
+        "201":
+          description: User registered successfully
+        "400":
+          description: Validation Errors
+
+  /auth/login:
+    post:
+      summary: Login User
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phone
+                - password
+              properties:
+                phone:
+                  type: string
+                  example: "077382567"
+                  description: Phone number must be 8 digits or above
+                password:
+                  type: string
+                  example: "12345678"
+                  description: Password must be 8 digits or above
+      responses:
+        "200":
+          description: User logged in successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                    description: JWT access token
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        "401":
+          description: Invalid phone or password
+
+  /auth/check-session:
+    get:
+      summary: Check if the current user session is valid
+      tags:
+        - Auth
+      security:
+        - BearerAuth: []
+
+      responses:
+        "200":
+          description: User is authenticated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  authenticated:
+                    type: boolean
+                    example: true
+                  user:
+                    type: object
+                    description: Decoded JWT payload
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      role:
+                        type: string
+                        example: mechanic
+                      iat:
+                        type: integer
+                        example: 1700000000
+                      exp:
+                        type: integer
+                        example: 1700003600
+
+        "401":
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Invalid or expired token
+
+  /servicerequests/{id}/info:
+    get:
+      summary: Get a specific mechanic info
+      tags:
+        - Customer
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the mechanic
+      responses:
+        "200":
+          description: Successfully retrieved mechanic's services
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+                    mechanic_lat:
+                      type: number
+                      format: float
+                    mechanic_lng:
+                      type: number
+                      format: float
+                    working_hours:
+                      type: string
+        "401":
+          description: Unauthorized - missing or invalid token
+        "404":
+          description: Mechanic not found
+
+  /servicerequests/{mechanicId}/services:
+    get:
+      summary: Get all services offered by a mechanic
+      tags:
+        - Customer
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: mechanicId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the mechanic
+      responses:
+        "200":
+          description: Successfully retrieved mechanic's services
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+                    price:
+                      type: integer
+                    serviceType:
+                      type: string
+                      enum:
+                        - moto
+                        - car
+                    mechanicId:
+                      type: integer
+        "401":
+          description: Unauthorized - missing or invalid token
+        "404":
+          description: Mechanic not found
+
+  /services/{id}:
+    put:
+      summary: Mechanic updates service information
+      tags:
+        - Mechanic
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the service to update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "Oil Change"
+                price:
+                  type: integer
+                  example: 500
+                serviceType:
+                  type: string
+                  enum:
+                    - moto
+                    - car
+                  example: "car"
+      responses:
+        "200":
+          description: Service updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  price:
+                    type: integer
+                  serviceType:
+                    type: string
+                    enum:
+                      - moto
+                      - car
+                  mechanicId:
+                    type: integer
+        "401":
+          description: Unauthorized - missing or invalid token
+        "403":
+          description: Forbidden - not authorized to update this service
+        "404":
+          description: Service not found
+    delete:
+      summary: Mechanic deletes a service
+      tags:
+        - Mechanic
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the service to delete
+      responses:
+        "200":
+          description: Service deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Service deleted successfully"
+        "401":
+          description: Unauthorized - missing or invalid token
+        "403":
+          description: Forbidden - not authorized to delete this service
+        "404":
+          description: Service not found
+
+  /services:
+    post:
+      summary: Mechanic creates a new service
+      tags:
+        - Mechanic
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - price
+                - serviceType
+              properties:
+                name:
+                  type: string
+                  example: "Oil Change"
+                  description: Name of the service
+                price:
+                  type: number
+                  example: 500
+                  description: Price of the service
+                serviceType:
+                  type: string
+                  enum:
+                    - moto
+                    - car
+                  example: "car"
+                  description: Type of vehicle the service is for
+      responses:
+        "201":
+          description: Service created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  price:
+                    type: number
+                  serviceType:
+                    type: string
+                    enum:
+                      - moto
+                      - car
+                  mechanicId:
+                    type: integer
+        "400":
+          description: Missing or invalid required fields
+        "401":
+          description: Unauthorized - missing or invalid token
+        "403":
+          description: Forbidden - only mechanics can create services
+
+  /servicerequests/nearby:
+   get:
+    summary: Get nearby mechanics
+    description: Returns a list of mechanics near the authenticated customer’s location.
+    tags:
+      - Customer
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: lat
+        in: query
+        required: true
+        schema:
+          type: number
+          format: float
+        description: Customer's current latitude
+      - name: lng
+        in: query
+        required: true
+        schema:
+          type: number
+          format: float
+        description: Customer's current longitude
+    responses:
+      "200":
+        description: List of nearby mechanics
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "mech_12345"
+                  name:
+                    type: string
+                    example: "John's Auto Repair"
+                  phone:
+                    type: string
+                    example: "+85512345678"
+                  distance:
+                    type: number
+                    format: float
+                    example: 2.5
+                  location:
+                    type: object
+                    properties:
+                      latitude:
+                        type: number
+                        format: float
+                        example: 11.5564
+                      longitude:
+                        type: number
+                        format: float
+                        example: 104.9282
+                  services:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: "srv_98765"
+                        name:
+                          type: string
+                          example: "Oil Change"
+                        price:
+                          type: integer
+                          example: 25
+                        serviceType:
+                          type: string
+                          enum:
+                            - moto
+                            - car
+                          example: "car"
+      "401":
+        description: Unauthorized – missing or invalid token
+      "403":
+        description: Forbidden – user is not a customer
+      "500":
+        description: Internal server error
+
+
+
