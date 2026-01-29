@@ -12,6 +12,16 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Build arguments for environment variables
+ARG VITE_API_BASE_URL=http://localhost:3000/api
+ARG VITE_SOCKET_URL=http://localhost:3000
+ARG VITE_VAPID_PUBLIC_KEY
+
+# Set environment variables for build
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+ENV VITE_SOCKET_URL=${VITE_SOCKET_URL}
+ENV VITE_VAPID_PUBLIC_KEY=${VITE_VAPID_PUBLIC_KEY}
+
 # Build the application
 RUN npm run build
 

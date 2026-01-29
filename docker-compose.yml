@@ -1,24 +1,86 @@
 version: '3.8'
 
 services:
+  # MySQL Database
+  db:
+    image: mysql:8.0
+    container_name: hav-jeang-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${DB_NAME:-havjeang}
+      MYSQL_USER: ${DB_USER:-havjeang_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-havjeang_pass}
+    ports:
+      - "3307:3306"  # Use 3307 to avoid conflict with local MySQL
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-rootpassword}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API Server
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: hav-jeang-backend
+    ports:
+      - "3000:3000"  # Backend API port
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=mysql://${DB_USER:-havjeang_user}:${DB_PASSWORD:-havjeang_pass}@db:3306/${DB_NAME:-havjeang}
+      - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-in-production}
+      - CORS_ORIGIN=http://localhost:5000
+      - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY}
+      - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY}
+      - VAPID_SUBJECT=${VAPID_SUBJECT:-mailto:admin@example.com}
+      - REQUEST_EXPIRY_MINUTES=${REQUEST_EXPIRY_MINUTES:-10}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/auth/check-session"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend React App
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: frontend-app
+      args:
+        - VITE_API_BASE_URL=http://localhost:3000/api
+        - VITE_SOCKET_URL=http://localhost:3000
+        - VITE_VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY}
+    container_name: hav-jeang-frontend
     ports:
-      - "5000:5000"
-    environment:
-      - NODE_ENV=production
+      - "5000:5000"  # Frontend port
+    depends_on:
+      - backend
     restart: unless-stopped
+    networks:
+      - app-network
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:5000"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-    networks:
-      - app-network
+
+volumes:
+  db_data:
+    driver: local
 
 networks:
   app-network:
