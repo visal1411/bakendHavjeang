@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { serviceRequests as mockRequests } from "@/data/mockData";
+import { serviceRequestAPI } from "@/lib/api";
 
 /**
  * useServiceRequests Hook
@@ -12,15 +12,17 @@ export const useServiceRequests = () => {
   const [filter, setFilter] = useState("all"); // all, pending, accepted, in-progress, completed
 
   useEffect(() => {
-    // Simulate fetching service requests from API
     const fetchRequests = async () => {
       setIsLoading(true);
-
-      // Simulate network delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      setRequests(mockRequests);
-      setIsLoading(false);
+      try {
+        const response = await serviceRequestAPI.getIncomingRequests();
+        setRequests(response.data || []);
+      } catch (error) {
+        console.error("Error fetching service requests:", error);
+        setRequests([]);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     fetchRequests();
@@ -42,51 +44,85 @@ export const useServiceRequests = () => {
   };
 
   const acceptRequest = async (requestId) => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    setRequests((prevRequests) =>
-      prevRequests.map((req) =>
-        req.id === requestId
-          ? { ...req, status: "accepted", acceptedAt: new Date().toISOString() }
-          : req
-      )
-    );
-
-    return { success: true, message: "Request accepted successfully" };
+    try {
+      const response = await serviceRequestAPI.acceptRequest(requestId);
+      setRequests((prevRequests) =>
+        prevRequests.map((req) =>
+          req.id === requestId
+            ? { ...req, ...response.data.request, status: "accepted" }
+            : req
+        )
+      );
+      return { success: true, message: "Request accepted successfully" };
+    } catch (error) {
+      console.error("Error accepting request:", error);
+      throw error;
+    }
   };
 
   const declineRequest = async (requestId) => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    setRequests((prevRequests) =>
-      prevRequests.map((req) =>
-        req.id === requestId ? { ...req, status: "declined" } : req
-      )
-    );
-
-    return { success: true, message: "Request declined" };
+    try {
+      const response = await serviceRequestAPI.rejectRequest(requestId);
+      setRequests((prevRequests) =>
+        prevRequests.map((req) =>
+          req.id === requestId ? { ...req, ...response.data.request, status: "cancelled" } : req
+        )
+      );
+      return { success: true, message: "Request declined" };
+    } catch (error) {
+      console.error("Error declining request:", error);
+      throw error;
+    }
   };
 
   const updateRequestStatus = async (requestId, newStatus) => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    try {
+      let response;
+      if (newStatus === "completed") {
+        response = await serviceRequestAPI.completeRequest(requestId);
+      } else {
+        // Handle other status updates if needed
+        throw new Error(`Status update to ${newStatus} not implemented`);
+      }
 
-    setRequests((prevRequests) =>
-      prevRequests.map((req) =>
-        req.id === requestId ? { ...req, status: newStatus } : req
-      )
-    );
+      setRequests((prevRequests) =>
+        prevRequests.map((req) =>
+          req.id === requestId ? { ...req, ...response.data.request, status: newStatus } : req
+        )
+      );
 
-    return { success: true, message: `Request status updated to ${newStatus}` };
+      return { success: true, message: `Request status updated to ${newStatus}` };
+    } catch (error) {
+      console.error("Error updating request status:", error);
+      throw error;
+    }
+  };
+
+  const proposePrice = async (requestId, proposed_price) => {
+    try {
+      const response = await serviceRequestAPI.proposePrice(requestId, proposed_price);
+      setRequests((prevRequests) =>
+        prevRequests.map((req) =>
+          req.id === requestId ? { ...req, ...response.data.request, status: "proposed" } : req
+        )
+      );
+      return { success: true, message: "Price proposed successfully" };
+    } catch (error) {
+      console.error("Error proposing price:", error);
+      throw error;
+    }
   };
 
   const refreshRequests = async () => {
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setRequests(mockRequests);
-    setIsLoading(false);
+    try {
+      const response = await serviceRequestAPI.getIncomingRequests();
+      setRequests(response.data || []);
+    } catch (error) {
+      console.error("Error refreshing requests:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return {
@@ -99,6 +135,7 @@ export const useServiceRequests = () => {
     acceptRequest,
     declineRequest,
     updateRequestStatus,
+    proposePrice,
     refreshRequests,
   };
 };

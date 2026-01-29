@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { serviceRequestAPI } from "@/lib/api";
 import { calculateTripFee } from "../utils/helpers";
 
 /**
@@ -85,30 +86,47 @@ export const useServiceRequest = (userLocation) => {
     );
   };
 
-  const submitServiceRequest = () => {
+  const submitServiceRequest = async () => {
     if (selectedServices.length === 0 && !serviceDescription.trim()) {
       alert("Please select a service or describe your issue");
       return;
     }
 
-    // In production: Send to API with photos
-    console.log("Service Request:", {
-      mechanic: selectedMechanic,
-      services: selectedServices,
-      description: serviceDescription,
-      tripFee: calculatedTripFee,
-      customerLocation: userLocation,
-      photos: photos.map((p) => p.file),
-    });
+    if (!userLocation || userLocation.length !== 2) {
+      alert("Please enable location to create a service request");
+      return;
+    }
 
-    alert(
-      `Request sent to ${selectedMechanic.name}!\n\n` +
-        `Trip Fee: $${calculatedTripFee}\n` +
-        `Photos: ${photos.length}\n\n` +
-        `You'll be notified when the mechanic responds.`
-    );
+    if (!selectedMechanic) {
+      alert("Please select a mechanic");
+      return;
+    }
 
-    closeServiceRequest();
+    try {
+      const requestData = {
+        mechanicId: selectedMechanic.id,
+        serviceIds: selectedServices.length > 0 ? selectedServices : undefined,
+        description: serviceDescription.trim() || undefined,
+        address: selectedMechanic.address || "Service location",
+        request_lat: userLocation[0],
+        request_lng: userLocation[1],
+      };
+
+      const response = await serviceRequestAPI.createRequest(requestData);
+      
+      alert(
+        `Request sent to ${selectedMechanic.name}!\n\n` +
+          `Trip Fee: $${calculatedTripFee}\n` +
+          `You'll be notified when the mechanic responds.`
+      );
+
+      closeServiceRequest();
+      return response.data;
+    } catch (error) {
+      console.error("Error creating service request:", error);
+      alert(error.response?.data?.message || "Failed to create service request. Please try again.");
+      throw error;
+    }
   };
 
   return {

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { authAPI } from '../../lib/api';
 import { Eye, EyeOff, Phone, Lock, User, Briefcase, Award, Upload, Wrench, UserCircle, MapPin, Clock } from 'lucide-react';
 
 /**
@@ -102,112 +103,87 @@ const AuthPage = () => {
     setError(''); // Clear error when user types
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    if (mode === 'signup') {
-      // REGISTRATION LOGIC
-      
-      // Validate password confirmation
-      if (formData.password !== formData.confirmPassword) {
-        setError('Passwords do not match');
-        return;
-      }
-
-      // Validate required fields
-      if (!formData.location) {
-        setError('Please select your location');
-        return;
-      }
-
-      // Validate mechanic-specific fields
-      if (role === 'mechanic') {
-        if (!formData.fullName || !formData.workshopName || !formData.serviceLocation || 
-            !formData.experience || !formData.serviceType) {
-          setError('Please fill in all required fields');
+    try {
+      if (mode === 'signup') {
+        // REGISTRATION LOGIC
+        
+        // Validate password confirmation
+        if (formData.password !== formData.confirmPassword) {
+          setError('Passwords do not match');
           return;
         }
-        if (!formData.workHourStart || !formData.workHourEnd) {
-          setError('Please select your work hours');
+
+        // Validate required fields
+        if (!formData.location) {
+          setError('Please select your location');
           return;
         }
-        if (formData.workHourStart >= formData.workHourEnd) {
-          setError('End time must be after start time');
-          return;
+
+        // Validate mechanic-specific fields
+        if (role === 'mechanic') {
+          if (!formData.fullName || !formData.workshopName || !formData.serviceLocation || 
+              !formData.experience || !formData.serviceType) {
+            setError('Please fill in all required fields');
+            return;
+          }
+          if (!formData.workHourStart || !formData.workHourEnd) {
+            setError('Please select your work hours');
+            return;
+          }
+          if (formData.workHourStart >= formData.workHourEnd) {
+            setError('End time must be after start time');
+            return;
+          }
         }
-      }
 
-      // Check if phone already exists
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const existingUser = users.find(u => u.phone === formData.phone);
-      
-      if (existingUser) {
-        setError('Phone number already registered');
-        return;
-      }
+        // Prepare registration data
+        const registerData = {
+          phone: formData.phone,
+          password: formData.password,
+          usertype: role,
+          name: role === 'mechanic' ? formData.fullName : formData.phone, // Use phone as name for customer if not provided
+          ...(role === 'mechanic' && {
+            working_hours: `${formData.workHourStart}-${formData.workHourEnd}`,
+            // Note: mechanic_lat and mechanic_lng should be set when mechanic updates location
+          }),
+        };
 
-      // Create new user with role
-      const newUser = {
-        phone: formData.phone,
-        password: formData.password, // In production, this should be hashed
-        role: role, // Store role permanently
-        location: formData.location,
-        ...(role === 'mechanic' && {
-          fullName: formData.fullName,
-          workshopName: formData.workshopName,
-          serviceLocation: formData.serviceLocation,
-          experience: formData.experience,
-          serviceType: formData.serviceType,
-          workHourStart: formData.workHourStart,
-          workHourEnd: formData.workHourEnd,
-        }),
-        createdAt: new Date().toISOString(),
-      };
+        // Call registration API
+        const response = await authAPI.register(registerData);
+        const { token, user: userData } = response.data;
 
-      // Save to mock database (localStorage)
-      users.push(newUser);
-      localStorage.setItem('users', JSON.stringify(users));
+        // Log in the user with token
+        await login(userData, token);
 
-      // Log in the user
-      login(newUser);
+        // Route based on role
+        if (role === 'customer') {
+          navigate('/customer/home');
+        } else {
+          navigate('/mechanic/dashboard');
+        }
 
-      // Route based on role
-      if (role === 'customer') {
-        navigate('/customer/home');
       } else {
-        navigate('/mechanic/dashboard');
+        // LOGIN LOGIC
+        const response = await authAPI.login(formData.phone, formData.password);
+        const { token, user: userData } = response.data;
+
+        // Log in with token
+        await login(userData, token);
+
+        // Route based on role
+        if (userData.usertype === 'customer') {
+          navigate('/customer/home');
+        } else if (userData.usertype === 'mechanic') {
+          navigate('/mechanic/dashboard');
+        }
       }
-
-    } else {
-      // LOGIN LOGIC - NO ROLE SELECTION
-      
-      // Retrieve users from mock database
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      
-      // Find user by phone number
-      const user = users.find(u => u.phone === formData.phone);
-
-      if (!user) {
-        setError('Phone number not registered');
-        return;
-      }
-
-      // Verify password
-      if (user.password !== formData.password) {
-        setError('Incorrect password');
-        return;
-      }
-
-      // Log in with stored user data (including role)
-      login(user);
-
-      // Route based on STORED role from registration
-      if (user.role === 'customer') {
-        navigate('/customer/home');
-      } else if (user.role === 'mechanic') {
-        navigate('/mechanic/dashboard');
-      }
+    } catch (error) {
+      console.error('Auth error:', error);
+      setError(error.response?.data?.message || 'Authentication failed. Please try again.');
     }
   };
 

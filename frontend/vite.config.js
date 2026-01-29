@@ -10,4 +10,13 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // Ensure service worker is served correctly
+  publicDir: "public",
+  build: {
+    rollupOptions: {
+      input: {
+        main: "./index.html",
+      },
+    },
+  },
 });

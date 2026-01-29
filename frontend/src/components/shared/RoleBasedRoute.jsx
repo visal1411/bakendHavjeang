@@ -40,11 +40,12 @@ const RoleBasedRoute = ({ children, allowedRole }) => {
     return <Navigate to="/auth" replace />;
   }
 
-  // Redirect to appropriate home based on user role
-  if (user?.role !== allowedRole) {
-    if (user?.role === 'customer') {
+  // Redirect to appropriate home based on user role (backend uses 'usertype')
+  const userRole = user?.usertype || user?.role;
+  if (userRole !== allowedRole) {
+    if (userRole === 'customer') {
       return <Navigate to="/customer/home" replace />;
-    } else if (user?.role === 'mechanic') {
+    } else if (userRole === 'mechanic') {
       return <Navigate to="/mechanic/dashboard" replace />;
     }
   }
