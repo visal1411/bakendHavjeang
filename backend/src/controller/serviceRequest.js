@@ -272,6 +272,41 @@ export const getServicesByMechanic = async (req, res) => {
 };
 
 // ============================
+// CUSTOMER: Get grand total for a request (trip + services)
+// ============================
+export const getRequestTotal = async (req, res) => {
+  try {
+    const customerId = req.user.id;
+    const requestId = Number(req.params.id);
+
+    const request = await prisma.serviceRequest.findUnique({
+      where: { id: requestId },
+      include: { service: true }
+    });
+
+    if (!request) return res.status(404).json({ message: "Service request not found" });
+    if (request.customerId !== customerId) return res.status(403).json({ message: "Not allowed" });
+
+    const trip_price = request.trip_price ?? 0;
+    const proposed_price = request.proposed_price ?? null;
+    const services_sum = request.service.length
+      ? request.service.reduce((sum, s) => sum + Number(s.price), 0)
+      : (request.proposed_price ?? 0);
+    const total_price = request.total_price ?? 0;
+
+    res.json({
+      trip_price,
+      proposed_price,
+      services_sum,
+      total_price
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ============================
 // CUSTOMER: Get my requests
 // ============================
 export const getMyRequests = async (req, res) => {

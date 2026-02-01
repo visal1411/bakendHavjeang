@@ -15,7 +15,8 @@ import {
   getServicesByMechanic,
   acceptProposedPrice,
   declineProposedPrice,
-  proposeServicePrice
+  proposeServicePrice,
+  getRequestTotal
 } from "../controller/serviceRequest.js";
 
 const router = express.Router();
@@ -32,6 +33,9 @@ customerRouter.post("/", createServiceRequest);
 
 // View own requests
 customerRouter.get("/my", getMyRequests);
+
+// Get grand total for a request (trip + services)
+customerRouter.get("/:id/total", getRequestTotal);
 
 // Cancel request
 customerRouter.patch("/:id/cancel", cancelServiceRequest);
@@ -74,6 +78,9 @@ mechanicRouter.patch("/:id/complete", completeServiceRequest);
 
 // Propose service price
 mechanicRouter.patch("/:id/propose-price", proposeServicePrice);
+
+// Check money to be earned
+mechanicRouter.get("/:id/total", getRequestTotal);
 
 router.use("/mechanic", mechanicRouter);
 
