@@ -257,6 +257,34 @@ export const getMechanicById = async (req, res) => {
   }
 };
 
+// // ============================p
+// // CUSTOMER: Get mechanic info
+// // ============================
+// export const getCustomerById = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const customer = await prisma.user.findUnique({
+//       where: { id: Number(id) },
+//       select: {
+//         id: true,
+//         name: true,
+//         phone: true,
+//         usertype: true,
+//       }
+//     });
+
+//     if (!customer || customer.usertype !== "customer") {
+//       return res.status(404).json({ message: "Customer not found" });
+//     }
+
+//     res.status(200).json({ message: "Customer fetched successfully", customer });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
+
+
 // ============================
 // CUSTOMER: Get all services by a mechanic
 // ============================

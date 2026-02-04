@@ -111,3 +111,45 @@ export const checkSession = async (req, res) => {
     user: req.user
   })
 }
+
+// ============================
+// PROFILE: Get user profile (mechanic or customer)
+// Minimal: only basic info for all users; mechanics get extra fields
+// ============================
+export const getProfileById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = Number(id);
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        name: true,
+        phone: true,
+        usertype: true,
+        mechanic_lat: true,
+        mechanic_lng: true,
+        working_hours: true
+      }
+    });
+
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const profile = {
+      id: user.id,
+      name: user.name,
+      phone: user.phone,
+      usertype: user.usertype
+    };
+
+    if (user.usertype === 'mechanic') {
+      profile.location = { lat: user.mechanic_lat ?? null, lng: user.mechanic_lng ?? null };
+      profile.working_hours = user.working_hours ?? null;
+    }
+
+    res.status(200).json({ message: 'Profile fetched successfully', profile });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
