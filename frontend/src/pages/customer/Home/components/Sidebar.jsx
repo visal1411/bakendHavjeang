@@ -102,7 +102,8 @@ export const Sidebar = ({ isOpen, onClose, activeTab, onTabChange }) => {
                 {[
                   { id: 'explore', icon: HomeIcon, label: 'Explore', subtitle: 'Find nearby mechanics' },
                   { id: 'history', icon: History, label: 'History', subtitle: 'Your service history' },
-                  { id: 'saved', icon: Bookmark, label: 'Saved', subtitle: 'Favorite mechanics' }
+                  { id: 'saved', icon: Bookmark, label: 'Saved', subtitle: 'Favorite mechanics' },
+                  { id: 'profile', icon: User, label: 'Profile', subtitle: 'Manage your account' }
                 ].map((item) => {
                   const Icon = item.icon;
                   const isActive = activeTab === item.id;

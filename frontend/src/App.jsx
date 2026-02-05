@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import AuthPage from './pages/auth/AuthPage';
 import CustomerHome from './pages/customer/Home/CustomerHome';
+import CustomerProfile from './pages/customer/Profile';
 import MechanicDashboard from './pages/mechanic/Dashboard/MechanicDashboard';
 import RoleBasedRoute from './components/shared/RoleBasedRoute';
 
@@ -84,6 +85,14 @@ function App() {
             element={
               <RoleBasedRoute allowedRole="customer">
                 <CustomerHome />
+              </RoleBasedRoute>
+            } 
+          />
+          <Route 
+            path="/customer/profile" 
+            element={
+              <RoleBasedRoute allowedRole="customer">
+                <CustomerProfile />
               </RoleBasedRoute>
             } 
           />

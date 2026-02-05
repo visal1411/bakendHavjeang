@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   User, 
@@ -13,23 +13,29 @@ import {
   Wrench,
   Calendar,
   Mail,
-  Shield
+  Shield,
+  Navigation
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGeolocation } from '../../hooks';
 
 /**
  * MechanicProfile Component
  * 
  * Allows mechanics to view and edit their profile information
+ * Auto-populates location from GPS to improve UX
  */
 export const MechanicProfile = () => {
   const { user } = useAuth();
+  const { position: gpsPosition, error: gpsError } = useGeolocation();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [locationAddress, setLocationAddress] = useState('');
   
   // Mock profile data - In real app, fetch from API
   const [profile, setProfile] = useState({
@@ -38,6 +44,7 @@ export const MechanicProfile = () => {
     phone: user?.phone || '+855 12 345 678',
     email: 'sokpiseth@example.com',
     location: 'Daun Penh, Phnom Penh',
+    gpsCoordinates: null, // Will be populated from GPS
     specialty: 'Engine & Brake Specialist',
     experience: 8,
     workHours: '08:00 - 18:00',
@@ -52,6 +59,62 @@ export const MechanicProfile = () => {
   });
 
   const [editedProfile, setEditedProfile] = useState(profile);
+
+  // Auto-populate GPS coordinates when available
+  useEffect(() => {
+    if (gpsPosition && !profile.gpsCoordinates) {
+      const coords = {
+        lat: gpsPosition.lat,
+        lng: gpsPosition.lng
+      };
+      setProfile(prev => ({ ...prev, gpsCoordinates: coords }));
+      setEditedProfile(prev => ({ ...prev, gpsCoordinates: coords }));
+      
+      // Convert coordinates to address (reverse geocoding)
+      reverseGeocode(coords.lat, coords.lng);
+    }
+  }, [gpsPosition]);
+
+  /**
+   * Convert GPS coordinates to human-readable address
+   */
+  const reverseGeocode = async (lat, lng) => {
+    setIsLoadingLocation(true);
+    try {
+      // Using Nominatim (OpenStreetMap) reverse geocoding service
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
+      );
+      const data = await response.json();
+      
+      if (data && data.display_name) {
+        // Extract relevant parts of the address (district, city)
+        const address = data.address;
+        const locationString = [
+          address.suburb || address.neighbourhood || address.quarter,
+          address.city || address.town || address.village || 'Phnom Penh'
+        ].filter(Boolean).join(', ');
+        
+        setLocationAddress(locationString);
+        setProfile(prev => ({ ...prev, location: locationString }));
+        setEditedProfile(prev => ({ ...prev, location: locationString }));
+      }
+    } catch (error) {
+      console.error('Error reverse geocoding:', error);
+      setLocationAddress('');
+    } finally {
+      setIsLoadingLocation(false);
+    }
+  };
+
+  /**
+   * Manually refresh GPS location
+   */
+  const handleRefreshLocation = () => {
+    if (gpsPosition) {
+      reverseGeocode(gpsPosition.lat, gpsPosition.lng);
+    }
+  };
 
   const handleEdit = () => {
     setEditedProfile(profile);
@@ -92,36 +155,39 @@ export const MechanicProfile = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-gray-50 pb-20">
       {/* Header Card */}
-      <Card className="overflow-hidden">
-        <div className="bg-gradient-to-r from-primary to-blue-700 h-32"></div>
-        <CardContent className="relative pt-0 pb-6">
+      <Card className="overflow-hidden rounded-none shadow-sm">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 h-24"></div>
+        <CardContent className="pt-0 pb-6">
           {/* Profile Picture */}
-          <div className="flex justify-between items-start -mt-16 mb-4">
-            <div className="flex items-end gap-4">
-              <div className="w-32 h-32 bg-white rounded-full border-4 border-white shadow-lg flex items-center justify-center">
-                <User className="w-16 h-16 text-gray-400" />
+          <div className="flex flex-col items-center -mt-12 mb-4">
+            <motion.div 
+              className="w-24 h-24 bg-white rounded-full border-4 border-white shadow-lg flex items-center justify-center mb-3"
+              whileHover={{ scale: 1.05 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
+              <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
+                <Wrench className="w-10 h-10 text-white" />
               </div>
-              <div className="pb-2">
-                <h2 className="text-2xl font-bold text-gray-900">
-                  {profile.name}
-                </h2>
-                <p className="text-gray-600">{profile.workshopName}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                  <span className="font-bold text-gray-900">{profile.rating}</span>
-                  <span className="text-sm text-gray-600">
-                    ({profile.totalReviews} reviews)
-                  </span>
-                </div>
-              </div>
-            </div>
+            </motion.div>
             
+            <div className="text-center mb-3">
+              <h2 className="text-2xl font-bold text-gray-900 mb-1">
+                {profile.name}
+              </h2>
+              <p className="text-sm text-gray-600 font-medium mb-1">{profile.workshopName}</p>
+              <p className="text-xs text-gray-500 flex items-center justify-center gap-1">
+                <Shield className="w-3.5 h-3.5" />
+                Verified Mechanic
+              </p>
+            </div>
+
+            {/* Edit/Save Buttons */}
             {!isEditing ? (
               <Button
                 onClick={handleEdit}
-                className="bg-primary hover:bg-blue-700 text-white"
+                className="bg-blue-600 hover:bg-blue-700 text-white shadow-md"
               >
                 <Edit2 className="w-4 h-4 mr-2" />
                 Edit Profile
@@ -131,7 +197,7 @@ export const MechanicProfile = () => {
                 <Button
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-green-600 hover:bg-green-700 text-white shadow-md"
                 >
                   <Save className="w-4 h-4 mr-2" />
                   {isSaving ? 'Saving...' : 'Save'}
@@ -140,6 +206,7 @@ export const MechanicProfile = () => {
                   onClick={handleCancel}
                   variant="outline"
                   disabled={isSaving}
+                  className="shadow-sm"
                 >
                   <X className="w-4 h-4 mr-2" />
                   Cancel
@@ -149,31 +216,41 @@ export const MechanicProfile = () => {
           </div>
 
           {/* Quick Stats */}
-          <div className="grid grid-cols-3 gap-4 mt-6">
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <p className="text-2xl font-bold text-primary">{profile.totalJobs}</p>
-              <p className="text-sm text-gray-600">Total Jobs</p>
-            </div>
-            <div className="text-center p-4 bg-green-50 rounded-lg">
+          <div className="grid grid-cols-3 gap-3 mt-6">
+            <motion.div 
+              className="text-center p-3 bg-blue-50 rounded-xl border border-blue-100"
+              whileHover={{ scale: 1.02 }}
+            >
+              <p className="text-2xl font-bold text-blue-600">{profile.totalJobs}</p>
+              <p className="text-xs text-gray-600 mt-1">Requests</p>
+            </motion.div>
+            <motion.div 
+              className="text-center p-3 bg-yellow-50 rounded-xl border border-yellow-100"
+              whileHover={{ scale: 1.02 }}
+            >
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                <p className="text-2xl font-bold text-yellow-600">{profile.rating}</p>
+              </div>
+              <p className="text-xs text-gray-600">Rating</p>
+            </motion.div>
+            <motion.div 
+              className="text-center p-3 bg-green-50 rounded-xl border border-green-100"
+              whileHover={{ scale: 1.02 }}
+            >
               <p className="text-2xl font-bold text-green-600">{profile.experience}</p>
-              <p className="text-sm text-gray-600">Years Experience</p>
-            </div>
-            <div className="text-center p-4 bg-purple-50 rounded-lg">
-              <p className="text-2xl font-bold text-purple-600">
-                {formatDate(profile.joinedDate)}
-              </p>
-              <p className="text-sm text-gray-600">Member Since</p>
-            </div>
+              <p className="text-xs text-gray-600 mt-1">Years Exp</p>
+            </motion.div>
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
         {/* Contact Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Phone className="w-5 h-5 text-primary" />
+        <Card className="shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Phone className="w-5 h-5 text-blue-600" />
               Contact Information
             </CardTitle>
           </CardHeader>
@@ -214,26 +291,48 @@ export const MechanicProfile = () => {
             <div>
               <label className="text-sm text-gray-600 flex items-center gap-2 mb-1">
                 <MapPin className="w-4 h-4" />
-                Location
+                Location {gpsPosition && <span className="text-xs text-blue-600">(GPS)</span>}
               </label>
-              {isEditing ? (
-                <Input
-                  value={editedProfile.location}
-                  onChange={(e) => handleChange('location', e.target.value)}
-                  placeholder="District, City"
-                />
-              ) : (
-                <p className="font-medium text-gray-900">{profile.location}</p>
-              )}
+              <div className="space-y-2">
+                {isEditing ? (
+                  <div className="flex gap-2">
+                    <Input
+                      value={editedProfile.location}
+                      onChange={(e) => handleChange('location', e.target.value)}
+                      placeholder="District, City"
+                      disabled={isLoadingLocation}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleRefreshLocation}
+                      disabled={!gpsPosition || isLoadingLocation}
+                      variant="outline"
+                      className="flex-shrink-0"
+                      title="Refresh GPS location"
+                    >
+                      <Navigation className={`w-4 h-4 ${isLoadingLocation ? 'animate-spin' : ''}`} />
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="font-medium text-gray-900">{profile.location}</p>
+                )}
+                {gpsError && (
+                  <p className="text-xs text-orange-600 flex items-start gap-1">
+                    <span className="flex-shrink-0">⚠️</span>
+                    <span>{gpsError}</span>
+                  </p>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Business Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Briefcase className="w-5 h-5 text-primary" />
+        <Card className="shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Briefcase className="w-5 h-5 text-blue-600" />
               Business Information
             </CardTitle>
           </CardHeader>
@@ -285,67 +384,12 @@ export const MechanicProfile = () => {
                 <p className="font-medium text-gray-900">{profile.workHours}</p>
               )}
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Services Offered */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Wrench className="w-5 h-5 text-primary" />
-              Services Offered
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {profile.services.map((service, index) => (
-                <Badge
-                  key={index}
-                  className="bg-blue-100 text-primary border-blue-200"
-                >
-                  {service}
-                </Badge>
-              ))}
-            </div>
-            <div className="mt-4">
-              <label className="text-sm text-gray-600 mb-2 block">Vehicle Types</label>
-              <div className="flex flex-wrap gap-2">
-                {profile.vehicleTypes.map((type, index) => (
-                  <Badge
-                    key={index}
-                    className="bg-green-100 text-green-700 border-green-200"
-                  >
-                    {type}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Certifications */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="w-5 h-5 text-primary" />
-              Certifications & Credentials
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {profile.certifications.map((cert, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg border border-purple-200"
-                >
-                  <Shield className="w-5 h-5 text-purple-600" />
-                  <span className="font-medium text-gray-900">{cert}</span>
-                </div>
-              ))}
-            </div>
-            
-            <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <label className="text-sm text-gray-600 mb-1 block">Base Trip Fee</label>
+            <div>
+              <label className="text-sm text-gray-600 flex items-center gap-2 mb-1">
+                <span className="text-base">💰</span>
+                Base Trip Fee
+              </label>
               {isEditing ? (
                 <Input
                   type="number"
@@ -369,11 +413,76 @@ export const MechanicProfile = () => {
                   className="max-w-[200px]"
                 />
               ) : (
-                <p className="text-2xl font-bold text-primary">
-                  ${profile.baseTripFee.toFixed(2)} <span className="text-sm font-normal text-gray-600">per km</span>
+                <p className="font-medium text-gray-900">
+                  ${profile.baseTripFee.toFixed(2)} <span className="text-sm text-gray-600">per km</span>
                 </p>
               )}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Services & Expertise */}
+        <Card className="shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Wrench className="w-5 h-5 text-blue-600" />
+              Services & Expertise
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="text-sm text-gray-600 mb-2 block font-medium">Services Offered</label>
+              <div className="flex flex-wrap gap-2">
+                {profile.services.map((service, index) => (
+                  <Badge
+                    key={index}
+                    className="bg-blue-100 text-blue-700 border-blue-200 px-3 py-1"
+                  >
+                    {service}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-sm text-gray-600 mb-2 block font-medium">Vehicle Types</label>
+              <div className="flex flex-wrap gap-2">
+                {profile.vehicleTypes.map((type, index) => (
+                  <Badge
+                    key={index}
+                    className="bg-blue-100 text-blue-700 border-blue-200"
+                  >
+                    {type}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Certifications */}
+        <Card className="shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Shield className="w-5 h-5 text-blue-600" />
+              Certifications
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {profile.certifications.map((cert, index) => (
+              <motion.div
+                key={index}
+                className="p-4 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-all"
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center">
+                    <Shield className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="font-semibold text-gray-900">{cert}</span>
+                </div>
+              </motion.div>
+            ))}
           </CardContent>
         </Card>
       </div>

@@ -14,11 +14,86 @@ import {
 
 // Service categories for filtering
 export const categories = [
+  { id: "all", label: "All Services", icon: Wrench, color: "gray" },
   { id: "emergency", label: "Emergency", icon: AlertOctagon, color: "red" },
   { id: "tire", label: "Tire", icon: Disc, color: "blue" },
   { id: "battery", label: "Battery", icon: Battery, color: "yellow" },
   { id: "engine", label: "Engine", icon: Zap, color: "orange" },
   { id: "brake", label: "Brake", icon: TrendingUp, color: "purple" },
+];
+
+// Districts by province for location selection
+export const districtsByProvince = {
+  "Phnom Penh": [
+    { id: "chamkar-mon", label: "Chamkar Mon" },
+    { id: "daun-penh", label: "Daun Penh" },
+    { id: "7-makara", label: "7 Makara" },
+    { id: "toul-kork", label: "Tuol Kork" },
+    { id: "dangkao", label: "Dangkao" },
+    { id: "mean-chey", label: "Mean Chey" },
+    { id: "russey-keo", label: "Russey Keo" },
+    { id: "sen-sok", label: "Sen Sok" },
+    { id: "pou-senchey", label: "Pou Senchey" },
+    { id: "chroy-changvar", label: "Chroy Changvar" },
+    { id: "prampir-meakkakra", label: "Prampir Meakkakra" },
+    { id: "chbar-ampov", label: "Chbar Ampov" },
+    { id: "boeng-keng-kang", label: "Boeung Keng Kang" },
+    { id: "kamboul", label: "Kamboul" },
+  ],
+  "Siem Reap": [
+    { id: "siem-reap-city", label: "Siem Reap City" },
+    { id: "svay-dangkum", label: "Svay Dangkum" },
+    { id: "sala-kamraeuk", label: "Sala Kamraeuk" },
+    { id: "srangae", label: "Srangae" },
+    { id: "banteay-srei", label: "Banteay Srei" },
+    { id: "prasat-bakong", label: "Prasat Bakong" },
+  ],
+  Battambang: [
+    { id: "battambang-city", label: "Battambang City" },
+    { id: "banan", label: "Banan" },
+    { id: "thma-koul", label: "Thma Koul" },
+    { id: "battambang-sakor", label: "Battambang Sakor" },
+    { id: "moung-ruessei", label: "Moung Ruessei" },
+  ],
+  Sihanoukville: [
+    { id: "mittapheap", label: "Mittapheap" },
+    { id: "victory-hill", label: "Victory Hill" },
+    { id: "ochheuteal", label: "Ochheuteal" },
+    { id: "prey-nob", label: "Prey Nob" },
+  ],
+  "Kampong Cham": [
+    { id: "kampong-cham-city", label: "Kampong Cham City" },
+    { id: "chamkar-leu", label: "Chamkar Leu" },
+    { id: "kampong-siem", label: "Kampong Siem" },
+    { id: "prey-chhor", label: "Prey Chhor" },
+  ],
+  "Kampong Thom": [
+    { id: "kampong-thom-city", label: "Kampong Thom City" },
+    { id: "stoung", label: "Stoung" },
+    { id: "prasat-sambour", label: "Prasat Sambour" },
+  ],
+  Kampot: [
+    { id: "kampot-city", label: "Kampot City" },
+    { id: "angkor-chey", label: "Angkor Chey" },
+    { id: "kampong-trach", label: "Kampong Trach" },
+  ],
+  Kep: [{ id: "kep-city", label: "Kep City" }],
+  Takeo: [
+    { id: "takeo-city", label: "Takeo City" },
+    { id: "tram-kak", label: "Tram Kak" },
+    { id: "kirivong", label: "Kirivong" },
+  ],
+  "Prey Veng": [
+    { id: "prey-veng-city", label: "Prey Veng City" },
+    { id: "preah-sdach", label: "Preah Sdach" },
+    { id: "svay-antor", label: "Svay Antor" },
+  ],
+};
+
+// Legacy export for backward compatibility (Phnom Penh only)
+export const phnomPenhDistricts = [
+  { id: "all", label: "All Districts" },
+  ...districtsByProvince["Phnom Penh"],
 ];
 
 // Available service types for customer selection
@@ -48,6 +123,7 @@ export const mockMechanics = [
     workHours: "08:00 - 18:00",
     phone: "+855 12 345 678",
     location: "Daun Penh, Phnom Penh",
+    district: "daun-penh",
     baseTripFee: 2.0, // USD per km
   },
   {
@@ -65,6 +141,7 @@ export const mockMechanics = [
     workHours: "07:00 - 19:00",
     phone: "+855 12 876 543",
     location: "Toul Kork, Phnom Penh",
+    district: "toul-kork",
     baseTripFee: 2.0,
   },
   {
@@ -82,6 +159,7 @@ export const mockMechanics = [
     workHours: "08:00 - 17:00",
     phone: "+855 12 234 567",
     location: "Chamkar Mon, Phnom Penh",
+    district: "chamkar-mon",
     baseTripFee: 2.0,
   },
   {
@@ -99,6 +177,7 @@ export const mockMechanics = [
     workHours: "24/7",
     phone: "+855 12 456 789",
     location: "Russey Keo, Phnom Penh",
+    district: "russey-keo",
     baseTripFee: 1.5,
   },
   {
@@ -116,6 +195,7 @@ export const mockMechanics = [
     workHours: "08:00 - 18:00",
     phone: "+855 12 567 890",
     location: "Tuol Kouk, Phnom Penh",
+    district: "toul-kork",
     baseTripFee: 2.0,
   },
   {

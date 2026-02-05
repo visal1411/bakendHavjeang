@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Eye, EyeOff, Phone, Lock, User, Briefcase, Award, Upload, Wrench, UserCircle, MapPin, Clock } from 'lucide-react';
+import { phnomPenhDistricts, districtsByProvince } from '../../data/mockData';
 
 /**
  * AuthPage Component
@@ -98,7 +99,19 @@ const AuthPage = () => {
   }, [mode]);
 
   const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    
+    // If location (province) changes, clear the district selection
+    if (name === 'location') {
+      setFormData({ 
+        ...formData, 
+        [name]: value,
+        serviceLocation: '' // Clear district when province changes
+      });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
+    
     setError(''); // Clear error when user types
   };
 
@@ -522,19 +535,37 @@ const AuthPage = () => {
             {mode === 'signup' && role === 'mechanic' && (
               <div>
                 <label className="block text-sm font-semibold text-text-primary mb-2">
-                  Service Location
+                  Service Location (District)
                 </label>
                 <div className="relative">
-                  <input
-                    type="text"
+                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary pointer-events-none z-10" />
+                  <select
                     name="serviceLocation"
                     value={formData.serviceLocation}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                    placeholder="City, State or Area"
+                    className="w-full pl-12 pr-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all appearance-none cursor-pointer"
                     required
-                  />
+                    disabled={!formData.location}
+                  >
+                    <option value="">Select your district...</option>
+                    {formData.location && districtsByProvince[formData.location] && 
+                      districtsByProvince[formData.location].map(district => (
+                        <option key={district.id} value={district.id}>
+                          {district.label}
+                        </option>
+                      ))}
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <svg className="w-5 h-5 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
                 </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {formData.location 
+                    ? `Select the district where you provide services in ${formData.location}` 
+                    : 'Please select a province first'}
+                </p>
               </div>
             )}
 

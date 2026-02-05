@@ -12,6 +12,8 @@ export const BottomSheet = ({
   bottomSheetState,
   filteredMechanics,
   availableMechanics,
+  recommendedMechanics,
+  distantMechanics,
   onDragStart,
   onDragMove,
   onDragEnd,
@@ -90,7 +92,7 @@ export const BottomSheet = ({
         </div>
       </motion.div>
 
-      {/* Mechanics List with stagger animation */}
+      {/* Mechanics List - All mechanics displayed */}
       <div className="overflow-y-auto px-5 py-4" style={{ height: 'calc(100% - 120px)' }}>
         <AnimatePresence mode="wait">
           {filteredMechanics.length === 0 ? (
@@ -139,13 +141,30 @@ export const BottomSheet = ({
                   <motion.div
                     key={mechanic.id}
                     variants={staggerItem}
+                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                    animate={{ 
+                      opacity: 1, 
+                      y: 0, 
+                      scale: 1,
+                    }}
+                    transition={{ 
+                      delay: index * 0.05,
+                      type: "spring",
+                      stiffness: 100
+                    }}
+                    whileHover={{ 
+                      scale: 1.02,
+                      transition: { duration: 0.2 }
+                    }}
                     layout
+                    className="transform-gpu"
                   >
                     <MechanicCard
                       mechanic={mechanic}
                       onSelect={onMechanicSelect}
                       isSaved={isMechanicSaved(mechanic.id)}
                       onToggleSave={onToggleSave}
+                      isRecommended={mechanic.distance <= 5}
                     />
                   </motion.div>
                 ))}

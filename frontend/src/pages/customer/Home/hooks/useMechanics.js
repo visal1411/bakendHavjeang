@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { mockMechanics } from "@/data/mockData";
 
+// Service Zone Configuration (similar to Grab/PassApp)
+const RECOMMENDED_ZONE_KM = 5; // Mechanics within 5km are recommended
+
 /**
  * Calculate distance between two coordinates using Haversine formula
  * @param {number} lat1 - First latitude
@@ -48,10 +51,12 @@ export const useMechanics = (
   searchQuery,
   selectedCategory,
   userLocation = null,
-  initialMaxDistance = null
+  initialMaxDistance = null,
 ) => {
   const [mechanics, setMechanics] = useState([]);
   const [filteredMechanics, setFilteredMechanics] = useState([]);
+  const [recommendedMechanics, setRecommendedMechanics] = useState([]);
+  const [distantMechanics, setDistantMechanics] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [maxDistance, setMaxDistance] = useState(initialMaxDistance);
 
@@ -64,7 +69,7 @@ export const useMechanics = (
     }, 800);
   }, []);
 
-  // Filter mechanics based on search, category, and distance
+  // Filter mechanics based on search and category - ALWAYS SHOW FULL LIST
   useEffect(() => {
     let filtered = mechanics;
 
@@ -80,22 +85,12 @@ export const useMechanics = (
         (m) =>
           m.name.toLowerCase().includes(query) ||
           m.services.some((s) => s.toLowerCase().includes(query)) ||
-          m.location.toLowerCase().includes(query)
+          m.location.toLowerCase().includes(query),
       );
     }
 
-    // Distance filter (zone-based)
-    if (userLocation && maxDistance) {
-      filtered = filtered.filter((m) => {
-        const distance = calculateDistance(
-          userLocation.lat,
-          userLocation.lng,
-          m.lat,
-          m.lng
-        );
-        return distance <= maxDistance;
-      });
-    }
+    // NOTE: NO DISTANCE FILTERING - Always show full list regardless of distance
+    // This ensures all mechanics are visible to customers at all times
 
     // Update distances for all filtered mechanics
     if (userLocation) {
@@ -105,11 +100,25 @@ export const useMechanics = (
           userLocation.lat,
           userLocation.lng,
           m.lat,
-          m.lng
+          m.lng,
         ),
       }));
-      // Sort by distance
+      // Sort by distance (closest first)
       filtered.sort((a, b) => a.distance - b.distance);
+
+      // Categorize by service zone for visual emphasis
+      // Mechanics within 5km get special visual treatment (larger cards, animations)
+      const recommended = filtered.filter(
+        (m) => m.distance <= RECOMMENDED_ZONE_KM,
+      );
+      const distant = filtered.filter((m) => m.distance > RECOMMENDED_ZONE_KM);
+
+      setRecommendedMechanics(recommended);
+      setDistantMechanics(distant);
+    } else {
+      // When no user location, show all mechanics as recommended (no distance calculation)
+      setRecommendedMechanics(filtered);
+      setDistantMechanics([]);
     }
 
     setFilteredMechanics(filtered);
@@ -121,7 +130,10 @@ export const useMechanics = (
     mechanics,
     filteredMechanics,
     availableMechanics,
+    recommendedMechanics,
+    distantMechanics,
     isLoading,
     setMaxDistance,
+    RECOMMENDED_ZONE_KM,
   };
 };

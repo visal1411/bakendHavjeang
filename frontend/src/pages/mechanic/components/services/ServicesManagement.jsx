@@ -74,12 +74,12 @@ export const ServicesManagement = () => {
   });
 
   const categories = [
-    { value: 'tire', label: 'Tire', icon: Disc, color: 'bg-blue-100 text-blue-700' },
-    { value: 'battery', label: 'Battery', icon: Battery, color: 'bg-yellow-100 text-yellow-700' },
-    { value: 'engine', label: 'Engine', icon: Settings, color: 'bg-red-100 text-red-700' },
-    { value: 'brake', label: 'Brake', icon: TrendingUp, color: 'bg-orange-100 text-orange-700' },
-    { value: 'emergency', label: 'Emergency', icon: AlertOctagon, color: 'bg-red-100 text-red-700' },
-    { value: 'other', label: 'Other', icon: Wrench, color: 'bg-gray-100 text-gray-700' },
+    { value: 'tire', label: 'Tire', icon: Disc, color: 'bg-blue-100 text-blue-700 border-blue-300' },
+    { value: 'battery', label: 'Battery', icon: Battery, color: 'bg-blue-100 text-blue-700 border-blue-300' },
+    { value: 'engine', label: 'Engine', icon: Settings, color: 'bg-blue-100 text-blue-700 border-blue-300' },
+    { value: 'brake', label: 'Brake', icon: TrendingUp, color: 'bg-blue-100 text-blue-700 border-blue-300' },
+    { value: 'emergency', label: 'Emergency', icon: AlertOctagon, color: 'bg-blue-100 text-blue-700 border-blue-300' },
+    { value: 'other', label: 'Other', icon: Wrench, color: 'bg-blue-100 text-blue-700 border-blue-300' },
   ];
 
   const handleAddService = () => {
@@ -153,7 +153,7 @@ export const ServicesManagement = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <motion.div
           whileHover={{ y: -4 }}
-          className="bg-primary rounded-2xl p-6 text-white shadow-lg"
+          className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-6 text-white shadow-xl"
         >
           <div className="flex items-center justify-between">
             <div>
@@ -168,7 +168,7 @@ export const ServicesManagement = () => {
 
         <motion.div
           whileHover={{ y: -4 }}
-          className="bg-green-600 rounded-2xl p-6 text-white shadow-lg"
+          className="bg-gradient-to-br from-green-600 to-green-700 rounded-2xl p-6 text-white shadow-xl"
         >
           <div className="flex items-center justify-between">
             <div>
@@ -183,11 +183,11 @@ export const ServicesManagement = () => {
 
         <motion.div
           whileHover={{ y: -4 }}
-          className="bg-secondary rounded-2xl p-6 text-white shadow-lg"
+          className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-xl"
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-orange-100 text-sm font-medium">Avg Price</p>
+              <p className="text-blue-100 text-sm font-medium">Avg Price</p>
               <p className="text-3xl font-bold mt-1">
                 ${services.length > 0 ? (services.reduce((sum, s) => sum + s.basePrice, 0) / services.length).toFixed(2) : '0.00'}
               </p>
@@ -202,11 +202,11 @@ export const ServicesManagement = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+          <h2 className="text-3xl font-bold text-blue-600">
             Services Management
           </h2>
           <p className="text-sm text-gray-600 mt-1 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-secondary" />
+            <Sparkles className="w-4 h-4 text-blue-500" />
             Manage your service offerings and pricing
           </p>
         </div>
@@ -214,7 +214,7 @@ export const ServicesManagement = () => {
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <Button
               onClick={() => setIsAddingService(true)}
-              className="bg-primary hover:bg-blue-700 text-white shadow-md"
+              className="bg-blue-600 hover:bg-blue-700 text-white shadow-md"
             >
               <Plus className="w-5 h-5 mr-2" />
               Add Service
@@ -232,10 +232,10 @@ export const ServicesManagement = () => {
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
             transition={{ duration: 0.3 }}
           >
-            <Card className="border-2 border-primary-200 shadow-primary-lg">
-              <CardHeader className="bg-gradient-to-r from-primary-50 to-accent-50 border-b">
+            <Card className="border-2 border-blue-200 shadow-xl">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 border-b">
                 <CardTitle className="text-xl flex items-center gap-2">
-                  <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center">
+                  <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
                     <Wrench className="w-5 h-5 text-white" />
                   </div>
                   {editingService ? 'Edit Service' : 'Add New Service'}
@@ -244,7 +244,7 @@ export const ServicesManagement = () => {
               <CardContent className="p-6">
                 <div className="space-y-5">
                   <div>
-                    <label className="text-sm font-semibold text-gray-700 mb-2 block flex items-center gap-2">
+                    <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                       Service Name *
                       <span className="text-error-500">*</span>
                     </label>
@@ -252,14 +252,14 @@ export const ServicesManagement = () => {
                       placeholder="e.g., Tire Replacement"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="border-2 focus:border-primary-400 transition-colors"
+                      className="border-2 focus:border-blue-400 transition-colors"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                      <label className="text-sm font-semibold text-gray-700 mb-2 block flex items-center gap-2">
-                        <DollarSign className="w-4 h-4 text-success-500" />
+                      <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                        <DollarSign className="w-4 h-4 text-blue-600" />
                         Base Price (USD) *
                       </label>
                       <div className="relative">
@@ -281,7 +281,7 @@ export const ServicesManagement = () => {
                               e.preventDefault();
                             }
                           }}
-                          className="pl-8 border-2 focus:border-success-400 transition-colors"
+                          className="pl-8 border-2 focus:border-blue-400 transition-colors"
                         />
                       </div>
                     </div>
@@ -291,7 +291,7 @@ export const ServicesManagement = () => {
                         Category *
                       </label>
                       <select
-                        className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-all bg-white"
+                        className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all bg-white"
                         value={formData.category}
                         onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                       >
@@ -309,7 +309,7 @@ export const ServicesManagement = () => {
                       Description
                     </label>
                     <textarea
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-all min-h-[100px]"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all min-h-[100px]"
                       placeholder="Describe the service in detail..."
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -318,20 +318,20 @@ export const ServicesManagement = () => {
 
                   <motion.div 
                     className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border-2 border-gray-200"
-                    whileHover={{ borderColor: '#155DFC' }}
+                    whileHover={{ borderColor: '#2563eb' }}
                   >
                     <input
                       type="checkbox"
                       id="isActive"
                       checked={formData.isActive}
                       onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                      className="w-5 h-5 text-primary-500 rounded focus:ring-primary-400 cursor-pointer"
+                      className="w-5 h-5 text-blue-600 rounded focus:ring-blue-400 cursor-pointer"
                     />
                     <label htmlFor="isActive" className="text-sm font-medium text-gray-700 cursor-pointer flex-1">
                       Active (customers can request this service)
                     </label>
                     {formData.isActive ? (
-                      <CheckCircle className="w-5 h-5 text-success-500" />
+                      <CheckCircle className="w-5 h-5 text-blue-600" />
                     ) : (
                       <XCircle className="w-5 h-5 text-gray-400" />
                     )}
@@ -342,7 +342,7 @@ export const ServicesManagement = () => {
                       <Button
                         onClick={editingService ? handleUpdateService : handleAddService}
                         disabled={!formData.name || !formData.basePrice}
-                        className="w-full bg-primary hover:bg-blue-700 text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {editingService ? 'Update Service' : 'Add Service'}
                       </Button>
@@ -381,20 +381,22 @@ export const ServicesManagement = () => {
               >
                 <Card className={`overflow-hidden border-2 transition-all ${
                   service.isActive 
-                    ? 'border-primary-200 hover:border-primary-400 shadow-card hover:shadow-primary' 
+                    ? 'border-blue-200 hover:border-blue-400 shadow-card hover:shadow-xl' 
                     : 'border-gray-200 opacity-60 hover:opacity-100'
                 }`}>
                   {/* Color Bar */}
-                  <div className={`h-2 ${service.isActive ? 'bg-gradient-primary' : 'bg-gray-300'}`} />
+                  <div className={`h-2 ${
+                    service.isActive ? 'bg-gradient-to-r from-blue-600 to-blue-700' : 'bg-gray-300'
+                  }`} />
                   
                   <CardContent className="p-5">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                          {categoryInfo?.icon && <categoryInfo.icon className="w-6 h-6 text-primary" />}
+                          {categoryInfo?.icon && <categoryInfo.icon className="w-6 h-6 text-blue-600" />}
                           <h3 className="font-bold text-gray-900 text-lg">{service.name}</h3>
                         </div>
-                        <Badge className={`${categoryInfo?.color} font-medium`}>
+                        <Badge className={`${categoryInfo?.color} font-medium border`}>
                           {categoryInfo?.label}
                         </Badge>
                       </div>
@@ -402,8 +404,8 @@ export const ServicesManagement = () => {
 
                     <div className="mb-4">
                       <div className="flex items-baseline gap-1 mb-2">
-                        <DollarSign className="w-5 h-5 text-success-500" />
-                        <span className="text-3xl font-bold bg-gradient-secondary bg-clip-text text-transparent">
+                        <DollarSign className="w-5 h-5 text-blue-600" />
+                        <span className="text-3xl font-bold text-blue-700">
                           {service.basePrice.toFixed(2)}
                         </span>
                         <span className="text-sm text-gray-500">USD</span>
@@ -418,7 +420,7 @@ export const ServicesManagement = () => {
                     <div className="mb-4">
                       <Badge className={`${
                         service.isActive 
-                          ? 'bg-success-100 text-success-700 border border-success-200' 
+                          ? 'bg-blue-100 text-blue-700 border border-blue-300' 
                           : 'bg-gray-100 text-gray-700 border border-gray-200'
                       } flex items-center gap-1 w-fit`}>
                         {service.isActive ? (
@@ -435,7 +437,7 @@ export const ServicesManagement = () => {
                           onClick={() => handleEdit(service)}
                           variant="outline"
                           size="sm"
-                          className="w-full border-2 border-primary hover:bg-primary hover:text-white"
+                          className="w-full border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white"
                         >
                           <Edit2 className="w-3.5 h-3.5 mr-1" />
                           Edit
@@ -448,8 +450,8 @@ export const ServicesManagement = () => {
                           size="sm"
                           className={`w-full border-2 ${
                             service.isActive 
-                              ? 'border-orange-500 text-orange-600 hover:bg-orange-500 hover:text-white' 
-                              : 'border-green-500 text-green-600 hover:bg-green-500 hover:text-white'
+                              ? 'border-gray-400 text-gray-600 hover:bg-gray-500 hover:text-white' 
+                              : 'border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white'
                           }`}
                         >
                           {service.isActive ? 'Disable' : 'Enable'}
@@ -481,14 +483,14 @@ export const ServicesManagement = () => {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="text-center py-16 bg-gradient-to-br from-gray-50 to-primary-50 rounded-3xl border-2 border-dashed border-gray-300"
+          className="text-center py-16 bg-gradient-to-br from-gray-50 to-blue-50 rounded-3xl border-2 border-dashed border-blue-300"
         >
           <motion.div
             animate={{ y: [0, -10, 0] }}
             transition={{ duration: 2, repeat: Infinity }}
             className="inline-block"
           >
-            <div className="w-20 h-20 bg-gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-primary">
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl">
               <Wrench className="w-10 h-10 text-white" />
             </div>
           </motion.div>
@@ -499,7 +501,7 @@ export const ServicesManagement = () => {
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <Button
               onClick={() => setIsAddingService(true)}
-              className="bg-primary hover:bg-blue-700 text-white shadow-md"
+              className="bg-blue-600 hover:bg-blue-700 text-white shadow-md"
             >
               <Plus className="w-5 h-5 mr-2" />
               Add Your First Service

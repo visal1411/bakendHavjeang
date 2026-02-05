@@ -79,21 +79,42 @@ export const ServiceRequestCard = ({ request, onAccept, onDecline, onViewDetails
           </div>
         )}
 
-        {/* Location & Distance - With Icons */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="flex items-center gap-2 p-2 bg-white rounded-lg">
-            <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
-            <div>
-              <p className="text-xs text-gray-600">Distance</p>
-              <p className="font-bold text-gray-900">{request.distance} km</p>
+        {/* Customer Location - Prominent for Pending Requests */}
+        <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border-2 border-blue-300">
+          <div className="flex items-start justify-between mb-2">
+            <div className="flex-1">
+              <p className="text-xs text-gray-600 mb-1 flex items-center gap-1">
+                <MapPin className="w-3 h-3" />
+                Customer Location
+              </p>
+              <p className="font-bold text-gray-900 text-base">
+                {typeof request.location === 'string' ? request.location : request.location?.address || 'Location not specified'}
+              </p>
             </div>
+            {request.status === 'pending' && (
+              <Button
+                onClick={() => onViewDetails(request.id)}
+                variant="outline"
+                size="sm"
+                className="border-2 border-blue-500 text-blue-600 hover:bg-blue-600 hover:text-white font-bold"
+              >
+                <MapPin className="w-4 h-4 mr-1" />
+                View Map
+              </Button>
+            )}
           </div>
-          <div className="flex items-center gap-2 p-2 bg-white rounded-lg">
-            <Clock className="w-4 h-4 text-primary flex-shrink-0" />
-            <div>
-              <p className="text-xs text-gray-600">Requested</p>
-              <p className="font-bold text-gray-900">{formatTime(request.requestedAt)}</p>
-            </div>
+          <div className="flex items-center gap-1 text-sm text-gray-700">
+            <span className="font-semibold">{request.distance} km</span>
+            <span className="text-gray-500">from your location</span>
+          </div>
+        </div>
+
+        {/* Time Info */}
+        <div className="mb-4 p-3 bg-white rounded-lg flex items-center gap-2">
+          <Clock className="w-4 h-4 text-primary flex-shrink-0" />
+          <div>
+            <p className="text-xs text-gray-600">Requested</p>
+            <p className="font-bold text-gray-900">{formatTime(request.requestedAt)}</p>
           </div>
         </div>
 

@@ -17,7 +17,6 @@ import { StatsCard } from './StatsCard';
 import { ServiceRequestCard } from './ServiceRequestCard';
 import { AvailabilityToggle } from './AvailabilityToggle';
 import { EarningsSummary } from './EarningsSummary';
-import { QuickActions } from './QuickActions';
 import { ServiceRequestDetailModal } from './ServiceRequestDetailModal';
 
 // Hooks
@@ -81,9 +80,7 @@ export const DashboardOverview = () => {
     }
   };
 
-  const handleQuickAction = (actionId) => {
-    console.log('Quick action:', actionId);
-  };
+
 
   const handleRefresh = async () => {
     await Promise.all([refreshStats(), refreshRequests()]);
@@ -94,10 +91,9 @@ export const DashboardOverview = () => {
   };
 
   const tabs = [
-    { id: 'pending', label: 'New Jobs', count: counts.pending, color: 'yellow', icon: AlertCircle },
+    { id: 'pending', label: 'New Requests', count: counts.pending, color: 'yellow', icon: AlertCircle },
     { id: 'accepted', label: 'Accepted', count: counts.accepted, color: 'blue', icon: CheckCircle },
-    { id: 'in-progress', label: 'Working On', count: counts.inProgress, color: 'purple', icon: Clock },
-    { id: 'all', label: 'All Jobs', count: counts.all, color: 'gray', icon: Briefcase },
+    { id: 'completed', label: 'Completed', count: counts.completed || 0, color: 'green', icon: CheckCircle },
   ];
 
   return (
@@ -127,7 +123,7 @@ export const DashboardOverview = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <StatsCard
               icon={Briefcase}
-              label="Total Jobs"
+              label="Service Requests"
               value={stats?.totalJobs || 0}
               subValue={`${stats?.completedJobs || 0} completed`}
             />
@@ -172,8 +168,8 @@ export const DashboardOverview = () => {
               </div>
             </div>
 
-            {/* Filter Tabs - More Intuitive */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            {/* Filter Tabs - Simplified */}
+            <div className="grid grid-cols-3 gap-3 mb-6">
               {tabs.map(tab => {
                 const Icon = tab.icon;
                 const isActive = selectedTab === tab.id;
@@ -249,7 +245,7 @@ export const DashboardOverview = () => {
           </div>
         </div>
 
-        {/* Right Column - Availability, Earnings, Quick Actions */}
+        {/* Right Column - Availability, Earnings, Performance */}
         <div className="space-y-6">
           {/* Availability Toggle */}
           <AvailabilityToggle
@@ -259,9 +255,6 @@ export const DashboardOverview = () => {
 
           {/* Earnings Summary */}
           <EarningsSummary earnings={earningsData} />
-
-          {/* Quick Actions */}
-          <QuickActions onActionClick={handleQuickAction} />
 
           {/* Performance Summary */}
           <div className="bg-white rounded-2xl shadow-sm p-6">
@@ -283,7 +276,7 @@ export const DashboardOverview = () => {
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Cancelled Jobs</span>
+                <span className="text-sm text-gray-600">Cancelled Requests</span>
                 <span className="text-sm font-bold text-red-600">
                   {stats?.cancelledJobs || 0}
                 </span>

@@ -74,7 +74,7 @@ export const ExploreView = ({
   map: { mapRef, center, zoom, recenter },
   
   // Mechanics
-  mechanics: { filtered, available, searchQuery, setSearchQuery, selectedCategory, onCategorySelect },
+  mechanics: { filtered, available, recommended, distant, searchQuery, setSearchQuery, selectedCategory, onCategorySelect },
   
   // Service Request
   serviceRequest: { 
@@ -101,6 +101,8 @@ export const ExploreView = ({
   // Safety checks to prevent crashes
   const safeFiltered = Array.isArray(filtered) ? filtered : [];
   const safeAvailable = Array.isArray(available) ? available : [];
+  const safeRecommended = Array.isArray(recommended) ? recommended : [];
+  const safeDistant = Array.isArray(distant) ? distant : [];
   const safeCenter = Array.isArray(center) && center.length === 2 ? center : [11.5564, 104.9282];
   const safeZoom = typeof zoom === 'number' ? zoom : 13;
 
@@ -138,7 +140,7 @@ export const ExploreView = ({
       <SearchBar
         searchQuery={searchQuery || ''}
         setSearchQuery={setSearchQuery}
-        selectedCategory={selectedCategory || 'emergency'}
+        selectedCategory={selectedCategory || 'all'}
         onCategorySelect={onCategorySelect}
         onMenuClick={toggleSidebar}
         onMechanicSelect={onMechanicSelect}
@@ -166,12 +168,14 @@ export const ExploreView = ({
         )}
       </AnimatePresence>
 
-      {/* Bottom Sheet - Mechanics List */}
+      {/* Bottom Sheet - Mechanics List with Zone Grouping */}
       <BottomSheet
         bottomSheetRef={ref}
         bottomSheetState={state || 'collapsed'}
         filteredMechanics={safeFiltered}
         availableMechanics={safeAvailable}
+        recommendedMechanics={safeRecommended}
+        distantMechanics={safeDistant}
         onDragStart={handlers?.onDragStart || (() => {})}
         onDragMove={handlers?.onDragMove || (() => {})}
         onDragEnd={handlers?.onDragEnd || (() => {})}

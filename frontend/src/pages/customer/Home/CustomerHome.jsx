@@ -20,6 +20,7 @@ import { Sidebar } from './components/Sidebar';
 import { ExploreView } from './components/ExploreView';
 import HistoryPage from '@/pages/customer/History/History';
 import SavedPage from '@/pages/customer/Saved/Saved';
+import CustomerProfile from '@/pages/customer/Profile';
 
 /**
  * 🏗️ Hav Jeang – Customer Home Page
@@ -56,8 +57,8 @@ const CustomerHome = () => {
   const location = useLocation();
   const isOnline = useOnlineStatus();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('emergency');
-  const [maxDistance, setMaxDistance] = useState(null); // null = no limit, or set to 5 for 5km radius
+  const [selectedCategory, setSelectedCategory] = useState('all'); // Show all mechanics by default
+  const [maxDistance, setMaxDistance] = useState(null); // null = always show all mechanics
   const mechanics = useMechanics(searchQuery, selectedCategory, location.userLocation, maxDistance);
   const savedMechanics = useSavedMechanics();
   
@@ -158,6 +159,17 @@ const CustomerHome = () => {
       );
     }
     
+    // Profile Page
+    if (activeTab === 'profile') {
+      return (
+        <motion.div key="profile" {...pageTransition}>
+          <ErrorBoundary>
+            <CustomerProfile />
+          </ErrorBoundary>
+        </motion.div>
+      );
+    }
+    
     // Explore View - Main map interface
     // Props are grouped into logical objects for better code organization
     return (
@@ -183,9 +195,11 @@ const CustomerHome = () => {
             mechanics={{
               filtered: mechanics?.filteredMechanics || [],
               available: mechanics?.availableMechanics || [],
+              recommended: mechanics?.recommendedMechanics || [],
+              distant: mechanics?.distantMechanics || [],
               searchQuery: searchQuery || '',
               setSearchQuery,
-              selectedCategory: selectedCategory || 'emergency',
+              selectedCategory: selectedCategory || 'all',
               onCategorySelect: setSelectedCategory
             }}
             // Service request state
@@ -239,6 +253,8 @@ const CustomerHome = () => {
     handleRecenterMap,
     mechanics?.filteredMechanics,
     mechanics?.availableMechanics,
+    mechanics?.recommendedMechanics,
+    mechanics?.distantMechanics,
     searchQuery,
     selectedCategory,
     serviceRequest?.showServiceRequest,
