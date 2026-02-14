@@ -12,7 +12,7 @@ RUN npm install
 COPY . .
 
 # Expose port
-EXPOSE 5000
+EXPOSE 8080
 
 # Generate Prisma client and start app
 # Use shell form instead of JSON array
