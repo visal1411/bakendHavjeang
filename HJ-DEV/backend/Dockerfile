@@ -5,11 +5,14 @@ FROM node:22-alpine
 WORKDIR /app
 
 # Copy package files and install dependencies
-COPY package*.json ./
+COPY backend/package*.json ./
 RUN npm install
 
 # Copy the rest of the code
-COPY . .
+COPY backend/. .
+
+# Copy documentation folder
+COPY documentation ./documentation
 
 # Expose port
 EXPOSE 8080
@@ -17,5 +20,5 @@ EXPOSE 8080
 # Generate Prisma client and start app
 # Use shell form instead of JSON array
 # Generate Prisma client, push schema to DB, and start app
-CMD sh -c "npx prisma generate && npx prisma db push --accept-data-loss && npm run dev"
+CMD sh -c "npx prisma generate && npx prisma db push --accept-data-loss && npm run start"
 

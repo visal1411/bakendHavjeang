@@ -21,17 +21,18 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Install a simple HTTP server to serve the static files
-RUN npm install -g serve
+RUN apk add --no-cache wget \
+  && npm install -g serve
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
 
 # Expose port
-EXPOSE 5000
+EXPOSE 5173
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:5000', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
+  CMD node -e "require('http').get('http://localhost:5173', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
 
 # Start the application
-CMD ["serve", "-s", "dist", "-l", "5000"]
+CMD ["serve", "-s", "dist", "-l", "5173"]
