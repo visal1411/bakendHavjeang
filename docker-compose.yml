@@ -3,7 +3,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: frontend-app
+    container_name: havjeang-frontend
     ports:
       - "5173:5173"
     environment:
@@ -30,7 +30,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: backend
+    container_name: havjeang-backend
     ports:
       - "8080:8080"
     env_file:
@@ -43,7 +43,7 @@ services:
 
   mysql:
     image: mysql:8
-    container_name: mysql
+    container_name: havjeang-mysql
     restart: always
     env_file:
       - .env
