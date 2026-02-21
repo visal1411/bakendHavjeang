@@ -79,9 +79,6 @@ mechanicRouter.patch("/:id/complete", completeServiceRequest);
 // Propose service price
 mechanicRouter.patch("/:id/propose-price", proposeServicePrice);
 
-// Check money to be earned
-mechanicRouter.get("/:id/total", getRequestTotal);
-
 router.use("/mechanic", mechanicRouter);
 
 export default router;
