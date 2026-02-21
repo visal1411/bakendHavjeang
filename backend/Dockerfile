@@ -5,14 +5,11 @@ FROM node:22-alpine
 WORKDIR /app
 
 # Copy package files and install dependencies
-COPY backend/package*.json ./
+COPY package*.json ./
 RUN npm install
 
 # Copy the rest of the code
-COPY backend/. .
-
-# Copy documentation folder
-COPY documentation ./documentation
+COPY . .
 
 # Expose port
 EXPOSE 8080
