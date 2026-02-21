@@ -50,7 +50,7 @@ const startServer = async () => {
     console.log(`📡 Socket.IO server initialized`);
   });
 };
-const swaggerDocument = YAML.load('./documentation/openapi.yaml')
+const swaggerDocument = YAML.load('./openapi.yaml')
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))
 

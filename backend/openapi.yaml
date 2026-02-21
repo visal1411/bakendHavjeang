@@ -1,0 +1,734 @@
+openapi: 3.0.3
+info:
+  title: HavJeang
+  version: 1.0.0
+  description: HavJeang API Documentation
+servers:
+  - url: http://localhost:8080/api
+
+components:
+  securitySchemes:
+    CustomerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for Customer role
+    MechanicAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for Mechanic role
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for any authenticated user
+
+paths:
+  /auth/register:
+    post:
+      summary: Register a new user as customer or mechanic
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - phone
+                - password
+                - usertype
+              properties:
+                name:
+                  type: string
+                  example: "John Doe"
+                phone:
+                  type: string
+                  example: "077382567"
+                  description: Phone number must be unique and numeric.
+                password:
+                  type: string
+                  example: "12345678"
+                  description: Password must be at least 8 characters long.
+                usertype:
+                  type: string
+                  enum:
+                    - customer
+                    - mechanic
+                  example: mechanic
+                working_hours:
+                  type: string
+                  example: "09:00 - 17:00"
+                  description: Required when usertype is mechanic.
+                mechanic_lat:
+                  type: number
+                  format: float
+                  example: 11.562108
+                  description: Required when usertype is mechanic.
+                mechanic_lng:
+                  type: number
+                  format: float
+                  example: 104.888535
+                  description: Required when usertype is mechanic.
+      responses:
+        "201":
+          description: User registered successfully
+        "400":
+          description: Validation error
+
+  /auth/login:
+    post:
+      summary: Login user
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phone
+                - password
+              properties:
+                phone:
+                  type: string
+                  example: "077382567"
+                password:
+                  type: string
+                  example: "12345678"
+      responses:
+        "200":
+          description: User logged in successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Login successful
+                  token:
+                    type: string
+                    description: JWT token
+                  algorithm:
+                    type: string
+                    example: HS256
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      name:
+                        type: string
+                      phone:
+                        type: string
+                      usertype:
+                        type: string
+        "400":
+          description: Invalid phone or password
+
+  /auth/check-session:
+    get:
+      summary: Check if the current user session is valid
+      tags:
+        - Auth
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: User is authenticated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  authenticated:
+                    type: boolean
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      role:
+                        type: string
+                      iat:
+                        type: integer
+                      exp:
+                        type: integer
+        "401":
+          description: Unauthorized - missing or invalid token
+
+  /auth/users/{id}/profile:
+    get:
+      summary: Get user profile (mechanic or customer)
+      tags:
+        - Auth
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Profile fetched successfully
+        "404":
+          description: User not found
+
+  /services:
+    post:
+      summary: Mechanic creates a new service
+      tags:
+        - Mechanic
+      security:
+        - MechanicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - price
+                - serviceType
+              properties:
+                name:
+                  type: string
+                  example: "Oil Change"
+                price:
+                  type: number
+                  example: 500
+                serviceType:
+                  type: string
+                  enum:
+                    - moto
+                    - car
+      responses:
+        "201":
+          description: Service created successfully
+        "400":
+          description: Missing or invalid required fields
+        "401":
+          description: Unauthorized - missing or invalid token
+        "403":
+          description: Forbidden - only mechanics can create services
+
+  /services/my:
+    get:
+      summary: Mechanic views all own services
+      tags:
+        - Mechanic
+      security:
+        - MechanicAuth: []
+      responses:
+        "200":
+          description: List of services
+        "401":
+          description: Unauthorized - missing or invalid token
+        "403":
+          description: Forbidden - only mechanics can view services
+
+  /services/{id}:
+    put:
+      summary: Mechanic updates service information
+      tags:
+        - Mechanic
+      security:
+        - MechanicAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "Oil Change"
+                price:
+                  type: number
+                  example: 500
+                serviceType:
+                  type: string
+                  enum:
+                    - moto
+                    - car
+      responses:
+        "200":
+          description: Service updated successfully
+        "401":
+          description: Unauthorized - missing or invalid token
+        "403":
+          description: Forbidden - not authorized to update this service
+        "404":
+          description: Service not found
+    delete:
+      summary: Mechanic deletes a service
+      tags:
+        - Mechanic
+      security:
+        - MechanicAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Service deleted successfully
+        "401":
+          description: Unauthorized - missing or invalid token
+        "403":
+          description: Forbidden - not authorized to delete this service
+        "404":
+          description: Service not found
+
+  /servicerequests/customer:
+    post:
+      summary: Customer creates a service request (known or unknown service flow)
+      tags:
+        - Customer
+      security:
+        - CustomerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required:
+                    - address
+                    - request_lat
+                    - request_lng
+                    - serviceIds
+                  properties:
+                    serviceIds:
+                      type: array
+                      minItems: 1
+                      items:
+                        type: integer
+                    mechanicId:
+                      type: integer
+                      nullable: true
+                      description: Optional when serviceIds belong to a mechanic.
+                    description:
+                      type: string
+                    address:
+                      type: string
+                    request_lat:
+                      type: number
+                      format: float
+                    request_lng:
+                      type: number
+                      format: float
+                - type: object
+                  required:
+                    - address
+                    - request_lat
+                    - request_lng
+                    - mechanicId
+                  properties:
+                    mechanicId:
+                      type: integer
+                    description:
+                      type: string
+                    address:
+                      type: string
+                    request_lat:
+                      type: number
+                      format: float
+                    request_lng:
+                      type: number
+                      format: float
+      responses:
+        "201":
+          description: Service request created
+        "400":
+          description: Missing required fields or invalid services
+        "401":
+          description: Unauthorized - missing or invalid token
+
+  /servicerequests/customer/my:
+    get:
+      summary: Customer views own requests
+      tags:
+        - Customer
+      security:
+        - CustomerAuth: []
+      responses:
+        "200":
+          description: List of requests
+        "401":
+          description: Unauthorized - missing or invalid token
+
+  /servicerequests/customer/{id}/total:
+    get:
+      summary: Get grand total for a request (trip + services)
+      tags:
+        - Customer
+      security:
+        - CustomerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Totals retrieved
+        "401":
+          description: Unauthorized - missing or invalid token
+        "403":
+          description: Not allowed
+        "404":
+          description: Request not found
+
+  /servicerequests/customer/{id}/cancel:
+    patch:
+      summary: Customer cancels a pending request
+      tags:
+        - Customer
+      security:
+        - CustomerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Request cancelled
+        "400":
+          description: Only pending requests can be cancelled
+        "401":
+          description: Unauthorized - missing or invalid token
+        "403":
+          description: Not allowed
+        "404":
+          description: Request not found
+
+  /servicerequests/customer/nearby:
+    get:
+      summary: Get nearby mechanics
+      description: Returns a list of mechanics near the authenticated customer's location.
+      tags:
+        - Customer
+      security:
+        - CustomerAuth: []
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+            format: float
+          description: Customer's current latitude
+        - name: lng
+          in: query
+          required: true
+          schema:
+            type: number
+            format: float
+          description: Customer's current longitude
+      responses:
+        "200":
+          description: List of nearby mechanics
+        "401":
+          description: Unauthorized - missing or invalid token
+
+  /servicerequests/customer/{id}/info:
+    get:
+      summary: Get mechanic info
+      tags:
+        - Customer
+      security:
+        - CustomerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Mechanic ID
+      responses:
+        "200":
+          description: Mechanic fetched successfully
+        "401":
+          description: Unauthorized - missing or invalid token
+        "404":
+          description: Mechanic not found
+
+  /servicerequests/customer/{mechanicId}/services:
+    get:
+      summary: Get all services offered by a mechanic
+      tags:
+        - Customer
+      security:
+        - CustomerAuth: []
+      parameters:
+        - name: mechanicId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Successfully retrieved mechanic's services
+        "401":
+          description: Unauthorized - missing or invalid token
+        "404":
+          description: Mechanic not found
+
+  /servicerequests/customer/{id}/accept-price:
+    patch:
+      summary: Customer accepts a proposed price
+      tags:
+        - Customer
+      security:
+        - CustomerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Price accepted
+        "400":
+          description: No price proposed yet
+        "401":
+          description: Unauthorized - missing or invalid token
+        "403":
+          description: Not allowed
+        "404":
+          description: Request not found
+
+  /servicerequests/customer/{id}/decline-price:
+    patch:
+      summary: Customer declines a proposed price
+      tags:
+        - Customer
+      security:
+        - CustomerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Price declined
+        "401":
+          description: Unauthorized - missing or invalid token
+        "403":
+          description: Not allowed
+        "404":
+          description: Request not found
+
+  /servicerequests/mechanic/incoming:
+    get:
+      summary: Mechanic views incoming requests
+      tags:
+        - Mechanic
+      security:
+        - MechanicAuth: []
+      responses:
+        "200":
+          description: List of incoming requests
+        "401":
+          description: Unauthorized - missing or invalid token
+
+  /servicerequests/mechanic/{id}/accept:
+    patch:
+      summary: Mechanic accepts a request
+      tags:
+        - Mechanic
+      security:
+        - MechanicAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Request accepted
+        "400":
+          description: Only pending requests can be accepted
+        "401":
+          description: Unauthorized - missing or invalid token
+        "403":
+          description: Not allowed
+        "404":
+          description: Request not found
+
+  /servicerequests/mechanic/{id}/reject:
+    patch:
+      summary: Mechanic rejects a request
+      tags:
+        - Mechanic
+      security:
+        - MechanicAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Request rejected
+        "400":
+          description: Only pending requests can be rejected
+        "401":
+          description: Unauthorized - missing or invalid token
+        "403":
+          description: Not allowed
+        "404":
+          description: Request not found
+
+  /servicerequests/mechanic/{id}/complete:
+    patch:
+      summary: Mechanic completes a request
+      tags:
+        - Mechanic
+      security:
+        - MechanicAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Request completed
+        "400":
+          description: Only accepted requests can be completed
+        "401":
+          description: Unauthorized - missing or invalid token
+        "403":
+          description: Not allowed
+        "404":
+          description: Request not found
+
+  /servicerequests/mechanic/{id}/propose-price:
+    patch:
+      summary: Mechanic proposes a price for unknown services
+      tags:
+        - Mechanic
+      security:
+        - MechanicAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - proposed_price
+              properties:
+                proposed_price:
+                  type: number
+                  example: 15
+      responses:
+        "200":
+          description: Price proposed successfully
+        "400":
+          description: Invalid price or invalid request status
+        "401":
+          description: Unauthorized - missing or invalid token
+        "403":
+          description: Not allowed
+        "404":
+          description: Request not found
+
+  /push/subscribe:
+    post:
+      summary: Save or update a web push subscription
+      tags:
+        - Push
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - endpoint
+                - keys
+              properties:
+                endpoint:
+                  type: string
+                keys:
+                  type: object
+                  required:
+                    - p256dh
+                    - auth
+                  properties:
+                    p256dh:
+                      type: string
+                    auth:
+                      type: string
+      responses:
+        "201":
+          description: Subscription saved
+        "400":
+          description: Invalid subscription payload
+        "401":
+          description: Unauthorized - missing or invalid token
+
+  /push/unsubscribe:
+    post:
+      summary: Delete a web push subscription
+      tags:
+        - Push
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - endpoint
+              properties:
+                endpoint:
+                  type: string
+      responses:
+        "200":
+          description: Subscription deleted
+        "400":
+          description: Endpoint is required
+        "401":
+          description: Unauthorized - missing or invalid token
+
+
+
