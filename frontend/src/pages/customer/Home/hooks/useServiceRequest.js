@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { calculateTripFee } from "../utils/helpers";
+import { serviceRequestsService } from "@/services";
 
 /**
  * 🛠️ useServiceRequest Hook
@@ -81,34 +82,48 @@ export const useServiceRequest = (userLocation) => {
     setSelectedServices((prev) =>
       prev.includes(serviceId)
         ? prev.filter((id) => id !== serviceId)
-        : [...prev, serviceId]
+        : [...prev, serviceId],
     );
   };
 
-  const submitServiceRequest = () => {
+  const submitServiceRequest = async () => {
     if (selectedServices.length === 0 && !serviceDescription.trim()) {
       alert("Please select a service or describe your issue");
       return;
     }
 
-    // In production: Send to API with photos
-    console.log("Service Request:", {
-      mechanic: selectedMechanic,
-      services: selectedServices,
-      description: serviceDescription,
-      tripFee: calculatedTripFee,
-      customerLocation: userLocation,
-      photos: photos.map((p) => p.file),
-    });
+    try {
+      // Prepare request data
+      const requestData = {
+        address: selectedMechanic.location || "Current Location",
+        request_lat: userLocation[0],
+        request_lng: userLocation[1],
+        trip_price: calculatedTripFee,
+        description: serviceDescription || null,
+        serviceIds: selectedServices.length > 0 ? selectedServices : undefined,
+      };
 
-    alert(
-      `Request sent to ${selectedMechanic.name}!\n\n` +
-        `Trip Fee: $${calculatedTripFee}\n` +
-        `Photos: ${photos.length}\n\n` +
-        `You'll be notified when the mechanic responds.`
-    );
+      // Submit to backend
+      const response =
+        await serviceRequestsService.createServiceRequest(requestData);
 
-    closeServiceRequest();
+      console.log("Service request created:", response);
+
+      alert(
+        `Request sent successfully!\n\n` +
+          `Trip Fee: $${calculatedTripFee}\n` +
+          `Photos: ${photos.length}\n\n` +
+          `You'll be notified when a mechanic responds.`,
+      );
+
+      closeServiceRequest();
+      return response;
+    } catch (error) {
+      console.error("Failed to submit service request:", error);
+      alert(
+        `Failed to submit request: ${error.response?.data?.message || error.message}`,
+      );
+    }
   };
 
   return {

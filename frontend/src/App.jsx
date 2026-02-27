@@ -4,6 +4,7 @@ import AuthPage from './pages/auth/AuthPage';
 import CustomerHome from './pages/customer/Home/CustomerHome';
 import CustomerProfile from './pages/customer/Profile';
 import MechanicDashboard from './pages/mechanic/Dashboard/MechanicDashboard';
+import MechanicProfile from './pages/mechanic/Profile';
 import RoleBasedRoute from './components/shared/RoleBasedRoute';
 
 /**
@@ -58,10 +59,10 @@ const RootRedirect = () => {
     return <Navigate to="/auth" replace />;
   }
 
-  // Redirect based on user role
-  if (user?.role === 'customer') {
+  // Redirect based on user role (backend uses 'usertype' field)
+  if (user?.usertype === 'customer') {
     return <Navigate to="/customer/home" replace />;
-  } else if (user?.role === 'mechanic') {
+  } else if (user?.usertype === 'mechanic') {
     return <Navigate to="/mechanic/dashboard" replace />;
   }
 
@@ -80,31 +81,39 @@ function App() {
           <Route path="/auth" element={<AuthPage />} />
 
           {/* Customer routes - role-based protected */}
-          <Route 
-            path="/customer/home" 
+          <Route
+            path="/customer/home"
             element={
               <RoleBasedRoute allowedRole="customer">
                 <CustomerHome />
               </RoleBasedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/customer/profile" 
+          <Route
+            path="/customer/profile"
             element={
               <RoleBasedRoute allowedRole="customer">
                 <CustomerProfile />
               </RoleBasedRoute>
-            } 
+            }
           />
 
           {/* Mechanic routes - role-based protected */}
-          <Route 
-            path="/mechanic/dashboard" 
+          <Route
+            path="/mechanic/dashboard"
             element={
               <RoleBasedRoute allowedRole="mechanic">
                 <MechanicDashboard />
               </RoleBasedRoute>
-            } 
+            }
+          />
+          <Route
+            path="/mechanic/profile"
+            element={
+              <RoleBasedRoute allowedRole="mechanic">
+                <MechanicProfile />
+              </RoleBasedRoute>
+            }
           />
 
           {/* Catch-all route - redirect to root */}

@@ -1,10 +1,12 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { authService } from '@/services';
 
 const AuthContext = createContext(null);
 
 // Local storage keys
 const AUTH_STORAGE_KEY = 'hav_jeang_auth';
 const USER_STORAGE_KEY = 'hav_jeang_user';
+const TOKEN_STORAGE_KEY = 'hav_jeang_token';
 
 /**
  * AuthProvider Component
@@ -23,18 +25,28 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Restore authentication state on mount
+  // Restore authentication state on mount and validate with backend
   useEffect(() => {
-    const restoreAuth = () => {
+    const restoreAuth = async () => {
       try {
-        const storedAuth = localStorage.getItem(AUTH_STORAGE_KEY);
+        const token = localStorage.getItem(TOKEN_STORAGE_KEY);
         const storedUser = localStorage.getItem(USER_STORAGE_KEY);
 
-        if (storedAuth === 'true' && storedUser) {
-          const userData = JSON.parse(storedUser);
-          setUser(userData);
-          setIsAuthenticated(true);
-          console.log('✅ Session restored:', userData.role);
+        if (token && storedUser) {
+          // Verify token with backend
+          try {
+            const sessionData = await authService.checkSession();
+            const userData = JSON.parse(storedUser);
+            setUser(userData);
+            setIsAuthenticated(true);
+            console.log('✅ Session restored from backend:', userData.usertype);
+          } catch (error) {
+            console.log('⚠️ Session expired or invalid, clearing auth');
+            // Token invalid or expired, clear everything
+            localStorage.removeItem(AUTH_STORAGE_KEY);
+            localStorage.removeItem(USER_STORAGE_KEY);
+            localStorage.removeItem(TOKEN_STORAGE_KEY);
+          }
         } else {
           console.log('ℹ️ No active session found');
         }
@@ -43,6 +55,7 @@ export const AuthProvider = ({ children }) => {
         // Clear corrupted data
         localStorage.removeItem(AUTH_STORAGE_KEY);
         localStorage.removeItem(USER_STORAGE_KEY);
+        localStorage.removeItem(TOKEN_STORAGE_KEY);
       } finally {
         setIsLoading(false);
       }
@@ -51,8 +64,9 @@ export const AuthProvider = ({ children }) => {
     restoreAuth();
   }, []);
 
-  const login = (userData) => {
-    // userData should contain: { phone, role, ... }
+  const login = (userData, token) => {
+    // userData should contain: { id, name, phone, usertype, ... }
+    // token is the JWT from backend
     try {
       setUser(userData);
       setIsAuthenticated(true);
@@ -60,8 +74,11 @@ export const AuthProvider = ({ children }) => {
       // Persist to localStorage
       localStorage.setItem(AUTH_STORAGE_KEY, 'true');
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userData));
+      if (token) {
+        localStorage.setItem(TOKEN_STORAGE_KEY, token);
+      }
       
-      console.log('✅ User logged in:', userData.role);
+      console.log('✅ User logged in:', userData.usertype);
     } catch (error) {
       console.error('❌ Error saving session:', error);
     }
@@ -75,6 +92,10 @@ export const AuthProvider = ({ children }) => {
       // Clear from localStorage
       localStorage.removeItem(AUTH_STORAGE_KEY);
       localStorage.removeItem(USER_STORAGE_KEY);
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
+      
+      // Also clear from authService
+      authService.logout();
       
       console.log('✅ User logged out');
     } catch (error) {

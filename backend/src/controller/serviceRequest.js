@@ -409,9 +409,30 @@ export const getNearbyMechanics = async (req, res) => {
     if (!lat || !lng) return res.status(400).json({ message: "Location required" });
 
     const customerLocation = { lat: Number(lat), lng: Number(lng) };
+    
+    // Fetch mechanics with their services
     const mechanics = await prisma.user.findMany({
-      where: { usertype: "mechanic", mechanic_lat: { not: null }, mechanic_lng: { not: null } },
-      select: { id: true, name: true, phone: true, mechanic_lat: true, mechanic_lng: true }
+      where: { 
+        usertype: "mechanic", 
+        mechanic_lat: { not: null }, 
+        mechanic_lng: { not: null } 
+      },
+      select: { 
+        id: true, 
+        name: true, 
+        phone: true, 
+        mechanic_lat: true, 
+        mechanic_lng: true,
+        working_hours: true,
+        service: {
+          select: {
+            id: true,
+            name: true,
+            price: true,
+            serviceType: true
+          }
+        }
+      }
     });
 
     res.json(mechanics);

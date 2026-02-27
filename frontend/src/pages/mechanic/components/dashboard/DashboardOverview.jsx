@@ -10,7 +10,6 @@ import {
   TrendingUp,
   RefreshCw
 } from 'lucide-react';
-import { earningsData } from '@/data/mockData';
 
 // Components
 import { StatsCard } from './StatsCard';
@@ -254,7 +253,7 @@ export const DashboardOverview = () => {
           />
 
           {/* Earnings Summary */}
-          <EarningsSummary earnings={earningsData} />
+          <EarningsSummary earnings={{ total: stats?.totalEarnings || 0, lastWeek: [] }} />
 
           {/* Performance Summary */}
           <div className="bg-white rounded-2xl shadow-sm p-6">

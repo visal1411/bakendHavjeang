@@ -1,74 +1,92 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  User, 
-  Phone, 
-  MapPin, 
-  Mail,
+import {
+  User,
+  Phone,
   Edit2,
   Save,
   X,
-  Calendar,
   Shield,
-  Heart,
-  Clock
+  ChevronLeft,
+  LogOut
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
+import authService from '@/services/authService';
+import { useNavigate } from 'react-router-dom';
 
 /**
  * CustomerProfile Component
  * 
- * Allows customers to view and edit their profile information
+ * Displays and allows editing of customer profile info from the API.
+ * API GET /api/auth/users/:id/profile returns: { name, phone, usertype }
  */
 export const CustomerProfile = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  
-  // Mock profile data - In real app, fetch from API
-  const [profile, setProfile] = useState({
-    name: user?.name || 'Chea Dara',
-    phone: user?.phone || '+855 12 345 678',
-    email: 'cheadara@example.com',
-    location: 'Chamkar Mon, Phnom Penh',
-    joinedDate: '2024-01-15',
-    totalRequests: 12,
-    savedMechanics: 5,
-    vehicleInfo: {
-      make: 'Honda',
-      model: 'Civic',
-      year: '2018',
-      plateNumber: 'PP 1234',
-    }
-  });
 
-  const [editedProfile, setEditedProfile] = useState(profile);
+  const [profile, setProfile] = useState(null);
+  const [editedProfile, setEditedProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        if (user?.id) {
+          const data = await authService.getProfileById(user.id);
+          const profileData = data.profile || data;
+          setProfile(profileData);
+          setEditedProfile(profileData);
+        }
+      } catch (err) {
+        console.error('Failed to load profile:', err);
+        setError('Failed to load profile. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, [user?.id]);
 
   const handleEdit = () => {
-    setEditedProfile(profile);
+    setEditedProfile({ ...profile });
     setIsEditing(true);
+    setSaveSuccess(false);
   };
 
   const handleCancel = () => {
-    setEditedProfile(profile);
+    setEditedProfile({ ...profile });
     setIsEditing(false);
   };
 
   const handleSave = async () => {
     setIsSaving(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setProfile(editedProfile);
-    setIsEditing(false);
-    setIsSaving(false);
-    
-    console.log('✅ Profile updated:', editedProfile);
+    setError(null);
+    setSaveSuccess(false);
+    try {
+      await authService.updateProfileById(user.id, {
+        name: editedProfile.name,
+        phone: editedProfile.phone,
+      });
+      setProfile({ ...editedProfile });
+      setIsEditing(false);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err) {
+      console.error('Failed to save profile:', err);
+      setError('Failed to save profile. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleChange = (field, value) => {
@@ -78,50 +96,113 @@ export const CustomerProfile = () => {
     }));
   };
 
-  const handleVehicleChange = (field, value) => {
-    setEditedProfile(prev => ({
-      ...prev,
-      vehicleInfo: {
-        ...prev.vehicleInfo,
-        [field]: value,
-      },
-    }));
+  const handleLogout = () => {
+    logout();
+    navigate('/auth');
   };
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'long', 
-      day: 'numeric',
-      year: 'numeric' 
-    });
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+          <p className="text-gray-500 text-sm">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <X className="w-8 h-8 text-red-500" />
+          </div>
+          <p className="text-red-600 font-medium mb-2">{error}</p>
+          <Button onClick={() => window.location.reload()} className="mt-2">
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <p className="text-gray-500">No profile data available.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* Header Card */}
       <Card className="overflow-hidden rounded-none shadow-sm">
-        <div className="bg-gradient-to-r from-primary to-blue-700 h-24"></div>
+        {/* Top navigation bar */}
+        <div className="bg-gradient-to-r from-primary to-blue-700 px-4 pt-4 pb-0">
+          <div className="flex items-center justify-between mb-4">
+            <button
+              onClick={() => navigate(-1)}
+              className="w-9 h-9 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <h1 className="text-white font-semibold text-lg">My Profile</h1>
+            <div className="w-9" /> {/* Spacer */}
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-r from-primary to-blue-700 h-12"></div>
         <CardContent className="pt-0 pb-6">
-          {/* Profile Picture - Not Covered */}
+          {/* Profile Avatar */}
           <div className="flex flex-col items-center -mt-12 mb-4">
-            <motion.div 
+            <motion.div
               className="w-24 h-24 bg-white rounded-full border-4 border-white shadow-lg flex items-center justify-center mb-3"
               whileHover={{ scale: 1.05 }}
               transition={{ type: "spring", stiffness: 300 }}
             >
-              <User className="w-12 h-12 text-gray-400" />
+              <div className="w-20 h-20 bg-gradient-to-br from-primary to-blue-600 rounded-full flex items-center justify-center">
+                <span className="text-white text-2xl font-bold">
+                  {profile.name ? profile.name.charAt(0).toUpperCase() : 'C'}
+                </span>
+              </div>
             </motion.div>
-            
+
             <div className="text-center mb-3">
               <h2 className="text-2xl font-bold text-gray-900 mb-1">
                 {profile.name}
               </h2>
-              <p className="text-sm text-gray-600 flex items-center justify-center gap-1">
-                <Shield className="w-3.5 h-3.5" />
-                Customer Account
-              </p>
+              <div className="flex items-center justify-center gap-2">
+                <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+                  <Shield className="w-3 h-3 mr-1" />
+                  {profile.usertype === 'customer' ? 'Customer' : profile.usertype}
+                </Badge>
+              </div>
             </div>
+
+            {/* Success message */}
+            {saveSuccess && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-3 px-4 py-2 bg-green-100 text-green-700 rounded-lg text-sm font-medium"
+              >
+                ✅ Profile updated successfully!
+              </motion.div>
+            )}
+
+            {/* Error message */}
+            {error && profile && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-3 px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium"
+              >
+                ❌ {error}
+              </motion.div>
+            )}
 
             {/* Edit/Save Buttons */}
             {!isEditing ? (
@@ -154,31 +235,6 @@ export const CustomerProfile = () => {
               </div>
             )}
           </div>
-
-          {/* Quick Stats */}
-          <div className="grid grid-cols-3 gap-3 mt-6">
-            <motion.div 
-              className="text-center p-3 bg-blue-50 rounded-xl border border-blue-100"
-              whileHover={{ scale: 1.02 }}
-            >
-              <p className="text-2xl font-bold text-primary">{profile.totalRequests}</p>
-              <p className="text-xs text-gray-600 mt-1">Requests</p>
-            </motion.div>
-            <motion.div 
-              className="text-center p-3 bg-pink-50 rounded-xl border border-pink-100"
-              whileHover={{ scale: 1.02 }}
-            >
-              <p className="text-2xl font-bold text-pink-600">{profile.savedMechanics}</p>
-              <p className="text-xs text-gray-600 mt-1">Saved</p>
-            </motion.div>
-            <motion.div 
-              className="text-center p-3 bg-green-50 rounded-xl border border-green-100"
-              whileHover={{ scale: 1.02 }}
-            >
-              <Calendar className="w-5 h-5 text-green-600 mx-auto mb-1" />
-              <p className="text-xs text-gray-600 font-medium">{formatDate(profile.joinedDate).split(',')[0]}</p>
-            </motion.div>
-          </div>
         </CardContent>
       </Card>
 
@@ -199,12 +255,12 @@ export const CustomerProfile = () => {
               </label>
               {isEditing ? (
                 <Input
-                  value={editedProfile.name}
+                  value={editedProfile.name || ''}
                   onChange={(e) => handleChange('name', e.target.value)}
                   placeholder="Your name"
                 />
               ) : (
-                <p className="font-medium text-gray-900">{profile.name}</p>
+                <p className="font-medium text-gray-900">{profile.name || 'Not set'}</p>
               )}
             </div>
 
@@ -215,162 +271,42 @@ export const CustomerProfile = () => {
               </label>
               {isEditing ? (
                 <Input
-                  value={editedProfile.phone}
+                  value={editedProfile.phone || ''}
                   onChange={(e) => handleChange('phone', e.target.value)}
-                  placeholder="+855 12 345 678"
+                  placeholder="0123456789"
                 />
               ) : (
-                <p className="font-medium text-gray-900">{profile.phone}</p>
+                <p className="font-medium text-gray-900">{profile.phone || 'Not set'}</p>
               )}
             </div>
 
             <div>
               <label className="text-sm text-gray-600 flex items-center gap-2 mb-1">
-                <Mail className="w-4 h-4" />
-                Email Address (Optional)
+                <Shield className="w-4 h-4" />
+                Account Type
               </label>
-              {isEditing ? (
-                <Input
-                  value={editedProfile.email}
-                  onChange={(e) => handleChange('email', e.target.value)}
-                  placeholder="email@example.com"
-                  type="email"
-                />
-              ) : (
-                <p className="font-medium text-gray-900">{profile.email || 'Not provided'}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="text-sm text-gray-600 flex items-center gap-2 mb-1">
-                <MapPin className="w-4 h-4" />
-                Default Location
-              </label>
-              {isEditing ? (
-                <Input
-                  value={editedProfile.location}
-                  onChange={(e) => handleChange('location', e.target.value)}
-                  placeholder="District, City"
-                />
-              ) : (
-                <p className="font-medium text-gray-900">{profile.location}</p>
-              )}
+              <p className="font-medium text-gray-900 capitalize">{profile.usertype || 'customer'}</p>
             </div>
           </CardContent>
         </Card>
 
-        {/* Vehicle Information */}
+        {/* Logout */}
         <Card className="shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
-              </svg>
-              Vehicle Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm text-gray-600 mb-1 block">Make</label>
-                {isEditing ? (
-                  <Input
-                    value={editedProfile.vehicleInfo.make}
-                    onChange={(e) => handleVehicleChange('make', e.target.value)}
-                    placeholder="Honda"
-                  />
-                ) : (
-                  <p className="font-medium text-gray-900">{profile.vehicleInfo.make}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="text-sm text-gray-600 mb-1 block">Model</label>
-                {isEditing ? (
-                  <Input
-                    value={editedProfile.vehicleInfo.model}
-                    onChange={(e) => handleVehicleChange('model', e.target.value)}
-                    placeholder="Civic"
-                  />
-                ) : (
-                  <p className="font-medium text-gray-900">{profile.vehicleInfo.model}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="text-sm text-gray-600 mb-1 block">Year</label>
-                {isEditing ? (
-                  <Input
-                    value={editedProfile.vehicleInfo.year}
-                    onChange={(e) => handleVehicleChange('year', e.target.value)}
-                    placeholder="2018"
-                  />
-                ) : (
-                  <p className="font-medium text-gray-900">{profile.vehicleInfo.year}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="text-sm text-gray-600 mb-1 block">Plate Number</label>
-                {isEditing ? (
-                  <Input
-                    value={editedProfile.vehicleInfo.plateNumber}
-                    onChange={(e) => handleVehicleChange('plateNumber', e.target.value)}
-                    placeholder="PP 1234"
-                  />
-                ) : (
-                  <p className="font-medium text-gray-900">{profile.vehicleInfo.plateNumber}</p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Quick Links */}
-        <Card className="shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Shield className="w-5 h-5 text-primary" />
-              Quick Links
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <motion.button 
-              className="w-full text-left p-4 rounded-xl border border-gray-200 hover:bg-blue-50 hover:border-blue-300 transition-all"
+          <CardContent className="py-4">
+            <motion.button
+              onClick={handleLogout}
+              className="w-full text-left p-4 rounded-xl border border-red-200 hover:bg-red-50 hover:border-red-300 transition-all"
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <span className="font-semibold text-gray-900 block">Service History</span>
-                    <span className="text-xs text-gray-500">View past services</span>
-                  </div>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
+                  <LogOut className="w-5 h-5 text-red-600" />
                 </div>
-                <span className="text-sm text-primary font-medium">→</span>
-              </div>
-            </motion.button>
-
-            <motion.button 
-              className="w-full text-left p-4 rounded-xl border border-gray-200 hover:bg-pink-50 hover:border-pink-300 transition-all"
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.99 }}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-pink-100 flex items-center justify-center">
-                    <Heart className="w-5 h-5 text-pink-600" />
-                  </div>
-                  <div>
-                    <span className="font-semibold text-gray-900 block">Saved Mechanics</span>
-                    <span className="text-xs text-gray-500">Your favorites</span>
-                  </div>
+                <div>
+                  <span className="font-semibold text-red-600 block">Log Out</span>
+                  <span className="text-xs text-gray-500">Sign out of your account</span>
                 </div>
-                <span className="text-sm text-pink-600 font-medium">→</span>
               </div>
             </motion.button>
           </CardContent>

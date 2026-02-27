@@ -19,7 +19,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { historyData } from '@/data/mockData';
+import { useCustomerHistory } from './useCustomerHistory';
 import { cn } from '@/lib/utils';
 import { staggerContainer, staggerItem, fadeIn, modalContainer, modalContent, backdropFade } from '@/lib/animations';
 
@@ -27,6 +27,9 @@ const History = () => {
   const [selectedHistory, setSelectedHistory] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
   const [activeTab, setActiveTab] = useState('all'); // 'all', 'active', 'completed'
+  
+  // Use custom hook to fetch history from backend
+  const { history: historyData, isLoading, cancelRequest, acceptProposedPrice, declineProposedPrice } = useCustomerHistory();
 
   const handleViewDetails = (item) => {
     setSelectedHistory(item);

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { serviceRequests as mockRequests } from "@/data/mockData";
+import { serviceRequestsService } from "@/services";
 
 /**
  * useServiceRequests Hook
@@ -12,15 +13,40 @@ export const useServiceRequests = () => {
   const [filter, setFilter] = useState("all"); // all, pending, accepted, in-progress, completed
 
   useEffect(() => {
-    // Simulate fetching service requests from API
+    // Fetch service requests from API
     const fetchRequests = async () => {
       setIsLoading(true);
 
-      // Simulate network delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      try {
+        const response = await serviceRequestsService.getIncomingRequests();
 
-      setRequests(mockRequests);
-      setIsLoading(false);
+        // Transform API response to match expected format
+        const transformedRequests = response.map((req) => ({
+          id: req.id,
+          customer: req.customer?.name || "Unknown",
+          location: req.address,
+          distance: req.distance || 0,
+          service:
+            req.service?.map((s) => s.name).join(", ") || "Unknown Service",
+          status: req.status,
+          tripPrice: req.trip_price,
+          totalPrice: req.total_price,
+          proposedPrice: req.proposed_price,
+          description: req.description,
+          lat: req.request_lat,
+          lng: req.request_lng,
+          createdAt: req.request_date,
+          customerApproved: req.customerApproved,
+        }));
+
+        setRequests(transformedRequests);
+      } catch (error) {
+        console.error("Failed to fetch service requests:", error);
+        // Fallback to mock data on error
+        setRequests(mockRequests);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     fetchRequests();
@@ -42,51 +68,108 @@ export const useServiceRequests = () => {
   };
 
   const acceptRequest = async (requestId) => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    try {
+      const response =
+        await serviceRequestsService.acceptServiceRequest(requestId);
 
-    setRequests((prevRequests) =>
-      prevRequests.map((req) =>
-        req.id === requestId
-          ? { ...req, status: "accepted", acceptedAt: new Date().toISOString() }
-          : req
-      )
-    );
+      setRequests((prevRequests) =>
+        prevRequests.map((req) =>
+          req.id === requestId
+            ? {
+                ...req,
+                status: "accepted",
+                acceptedAt: new Date().toISOString(),
+              }
+            : req,
+        ),
+      );
 
-    return { success: true, message: "Request accepted successfully" };
+      return { success: true, message: "Request accepted successfully" };
+    } catch (error) {
+      console.error("Failed to accept request:", error);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Failed to accept request",
+      };
+    }
   };
 
   const declineRequest = async (requestId) => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    try {
+      const response =
+        await serviceRequestsService.rejectServiceRequest(requestId);
 
-    setRequests((prevRequests) =>
-      prevRequests.map((req) =>
-        req.id === requestId ? { ...req, status: "declined" } : req
-      )
-    );
+      setRequests((prevRequests) =>
+        prevRequests.filter((req) => req.id !== requestId),
+      );
 
-    return { success: true, message: "Request declined" };
+      return { success: true, message: "Request declined" };
+    } catch (error) {
+      console.error("Failed to decline request:", error);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Failed to decline request",
+      };
+    }
   };
 
   const updateRequestStatus = async (requestId, newStatus) => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    try {
+      let response;
 
-    setRequests((prevRequests) =>
-      prevRequests.map((req) =>
-        req.id === requestId ? { ...req, status: newStatus } : req
-      )
-    );
+      if (newStatus === "completed") {
+        response =
+          await serviceRequestsService.completeServiceRequest(requestId);
+      } else {
+        // Handle other status updates if needed
+        console.warn("Status update not yet implemented for:", newStatus);
+        return { success: false, message: "Status update not supported" };
+      }
 
-    return { success: true, message: `Request status updated to ${newStatus}` };
+      setRequests((prevRequests) =>
+        prevRequests.map((req) =>
+          req.id === requestId ? { ...req, status: newStatus } : req,
+        ),
+      );
+
+      return {
+        success: true,
+        message: `Request status updated to ${newStatus}`,
+      };
+    } catch (error) {
+      console.error("Failed to update request status:", error);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Failed to update status",
+      };
+    }
   };
 
   const refreshRequests = async () => {
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setRequests(mockRequests);
-    setIsLoading(false);
+    try {
+      const response = await serviceRequestsService.getIncomingRequests();
+      const transformedRequests = response.map((req) => ({
+        id: req.id,
+        customerName: req.customer?.name || "Unknown Customer",
+        customerPhone: req.customer?.phone,
+        serviceType: req.service?.[0]?.serviceType || "unknown",
+        status: req.status,
+        location: req.address,
+        distance: req.distance || 0,
+        description: req.description,
+        requestedAt: req.request_date,
+        tripPrice: req.trip_price,
+        totalPrice: req.total_price,
+        proposedPrice: req.proposed_price,
+        customerApproved: req.customerApproved,
+      }));
+      setRequests(transformedRequests);
+    } catch (error) {
+      console.error("Failed to refresh requests:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return {

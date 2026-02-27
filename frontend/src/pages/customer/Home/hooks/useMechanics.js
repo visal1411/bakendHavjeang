@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { mockMechanics } from "@/data/mockData";
+import { serviceRequestsService } from "@/services";
 
 // Service Zone Configuration (similar to Grab/PassApp)
 const RECOMMENDED_ZONE_KM = 5; // Mechanics within 5km are recommended
@@ -62,12 +62,50 @@ export const useMechanics = (
 
   // Initialize mechanics on mount
   useEffect(() => {
-    setTimeout(() => {
-      setMechanics(mockMechanics);
-      setFilteredMechanics(mockMechanics);
-      setIsLoading(false);
-    }, 800);
-  }, []);
+    const fetchMechanics = async () => {
+      // Only fetch if we have user location
+      if (!userLocation) {
+        // Set empty arrays if no location available
+        setMechanics([]);
+        setFilteredMechanics([]);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        const response = await serviceRequestsService.getNearbyMechanics({
+          lat: userLocation.lat,
+          lng: userLocation.lng,
+        });
+
+        // Transform API response to match expected format
+        const mechanicsWithDistance = response.map((mechanic) => ({
+          id: mechanic.id,
+          name: mechanic.name,
+          lat: mechanic.mechanic_lat,
+          lng: mechanic.mechanic_lng,
+          distance: mechanic.distance,
+          available: true, // You can add availability logic
+          services: mechanic.services || [], // Services from backend
+          location: mechanic.location || "Unknown", // You may need to geocode this
+          phone: mechanic.phone,
+        }));
+
+        setMechanics(mechanicsWithDistance);
+        setFilteredMechanics(mechanicsWithDistance);
+      } catch (error) {
+        console.error("Failed to fetch mechanics:", error);
+        // Set empty arrays on error
+        setMechanics([]);
+        setFilteredMechanics([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchMechanics();
+  }, [userLocation]);
 
   // Filter mechanics based on search and category - ALWAYS SHOW FULL LIST
   useEffect(() => {

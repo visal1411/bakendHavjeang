@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { authService } from '@/services';
 import { Eye, EyeOff, Phone, Lock, User, Briefcase, Award, Upload, Wrench, UserCircle, MapPin, Clock } from 'lucide-react';
 import { phnomPenhDistricts, districtsByProvince } from '../../data/mockData';
 
@@ -39,6 +40,7 @@ const AuthPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
@@ -56,9 +58,9 @@ const AuthPage = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated && user) {
-      if (user.role === 'customer') {
+      if (user.usertype === 'customer') {
         navigate('/customer/home', { replace: true });
-      } else if (user.role === 'mechanic') {
+      } else if (user.usertype === 'mechanic') {
         navigate('/mechanic/dashboard', { replace: true });
       }
     }
@@ -115,112 +117,139 @@ const AuthPage = () => {
     setError(''); // Clear error when user types
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
-    if (mode === 'signup') {
-      // REGISTRATION LOGIC
-      
-      // Validate password confirmation
-      if (formData.password !== formData.confirmPassword) {
-        setError('Passwords do not match');
-        return;
-      }
-
-      // Validate required fields
-      if (!formData.location) {
-        setError('Please select your location');
-        return;
-      }
-
-      // Validate mechanic-specific fields
-      if (role === 'mechanic') {
-        if (!formData.fullName || !formData.workshopName || !formData.serviceLocation || 
-            !formData.experience || !formData.serviceType) {
-          setError('Please fill in all required fields');
+    try {
+      if (mode === 'signup') {
+        // REGISTRATION LOGIC
+        
+        // Validate password confirmation
+        if (formData.password !== formData.confirmPassword) {
+          setError('Passwords do not match');
+          setLoading(false);
           return;
         }
-        if (!formData.workHourStart || !formData.workHourEnd) {
-          setError('Please select your work hours');
+
+        // Validate required fields
+        if (!formData.location) {
+          setError('Please select your location');
+          setLoading(false);
           return;
         }
-        if (formData.workHourStart >= formData.workHourEnd) {
-          setError('End time must be after start time');
-          return;
+
+        // Validate mechanic-specific fields
+        if (role === 'mechanic') {
+          if (!formData.fullName || !formData.workshopName || !formData.serviceLocation || 
+              !formData.experience || !formData.serviceType) {
+            setError('Please fill in all required fields');
+            setLoading(false);
+            return;
+          }
+          if (!formData.workHourStart || !formData.workHourEnd) {
+            setError('Please select your work hours');
+            setLoading(false);
+            return;
+          }
+          if (formData.workHourStart >= formData.workHourEnd) {
+            setError('End time must be after start time');
+            setLoading(false);
+            return;
+          }
         }
-      }
 
-      // Check if phone already exists
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const existingUser = users.find(u => u.phone === formData.phone);
-      
-      if (existingUser) {
-        setError('Phone number already registered');
-        return;
-      }
+        // Prepare registration data for backend
+        const registrationData = {
+          name: role === 'mechanic' ? formData.fullName : formData.phone, // Backend expects 'name'
+          phone: formData.phone,
+          password: formData.password,
+          usertype: role, // 'customer' or 'mechanic'
+        };
 
-      // Create new user with role
-      const newUser = {
-        phone: formData.phone,
-        password: formData.password, // In production, this should be hashed
-        role: role, // Store role permanently
-        location: formData.location,
-        ...(role === 'mechanic' && {
-          fullName: formData.fullName,
-          workshopName: formData.workshopName,
-          serviceLocation: formData.serviceLocation,
-          experience: formData.experience,
-          serviceType: formData.serviceType,
-          workHourStart: formData.workHourStart,
-          workHourEnd: formData.workHourEnd,
-        }),
-        createdAt: new Date().toISOString(),
-      };
+        // Add mechanic-specific fields
+        if (role === 'mechanic') {
+          const workHours = `${formData.workHourStart}-${formData.workHourEnd}`;
+          registrationData.working_hours = workHours;
+          // Note: You may need to add mechanic_lat and mechanic_lng based on serviceLocation
+          // For now, we'll use default coordinates or you can add a geocoding service
+        }
 
-      // Save to mock database (localStorage)
-      users.push(newUser);
-      localStorage.setItem('users', JSON.stringify(users));
+        // Call backend API to register
+        const registerResponse = await authService.register(registrationData);
 
-      // Log in the user
-      login(newUser);
+        // Registration successful — backend does NOT return a token,
+        // so we auto-login with the same credentials to get a JWT.
+        if (registerResponse.user) {
+          const loginResponse = await authService.login({
+            phone: formData.phone,
+            password: formData.password,
+          });
 
-      // Route based on role
-      if (role === 'customer') {
-        navigate('/customer/home');
+          if (loginResponse.token && loginResponse.user) {
+            const userData = {
+              id: loginResponse.user.id,
+              name: loginResponse.user.name,
+              phone: loginResponse.user.phone,
+              usertype: loginResponse.user.usertype,
+              working_hours: loginResponse.user.working_hours,
+            };
+
+            login(userData, loginResponse.token);
+
+            if (role === 'customer') {
+              navigate('/customer/home');
+            } else {
+              navigate('/mechanic/dashboard');
+            }
+          }
+        }
+
       } else {
-        navigate('/mechanic/dashboard');
+        // LOGIN LOGIC - NO ROLE SELECTION
+        
+        // Call backend API to authenticate
+        const response = await authService.login({
+          phone: formData.phone,
+          password: formData.password,
+        });
+
+        if (response.token && response.user) {
+          // Create user object
+          const userData = {
+            id: response.user.id,
+            name: response.user.name,
+            phone: response.user.phone,
+            usertype: response.user.usertype,
+            working_hours: response.user.working_hours,
+          };
+
+          // Log in with token
+          login(userData, response.token);
+
+          // Route based on usertype from backend
+          if (response.user.usertype === 'customer') {
+            navigate('/customer/home');
+          } else if (response.user.usertype === 'mechanic') {
+            navigate('/mechanic/dashboard');
+          }
+        }
       }
-
-    } else {
-      // LOGIN LOGIC - NO ROLE SELECTION
-      
-      // Retrieve users from mock database
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      
-      // Find user by phone number
-      const user = users.find(u => u.phone === formData.phone);
-
-      if (!user) {
-        setError('Phone number not registered');
-        return;
+    } catch (err) {
+      console.error('Authentication error:', err);
+      // Handle specific error messages from backend
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else if (err.response?.data?.errors) {
+        // Validation errors from backend
+        const errors = err.response.data.errors;
+        setError(errors[0]?.msg || 'Validation failed');
+      } else {
+        setError(mode === 'signup' ? 'Registration failed. Please try again.' : 'Login failed. Please check your credentials.');
       }
-
-      // Verify password
-      if (user.password !== formData.password) {
-        setError('Incorrect password');
-        return;
-      }
-
-      // Log in with stored user data (including role)
-      login(user);
-
-      // Route based on STORED role from registration
-      if (user.role === 'customer') {
-        navigate('/customer/home');
-      } else if (user.role === 'mechanic') {
-        navigate('/mechanic/dashboard');
-      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -675,9 +704,20 @@ const AuthPage = () => {
             {/* Submit Button */}
             <button
               type="submit"
-              className="w-full bg-primary text-white py-3.5 rounded-xl font-semibold hover:bg-primary/90 transition-all duration-200 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30"
+              disabled={loading}
+              className="w-full bg-primary text-white py-3.5 rounded-xl font-semibold hover:bg-primary/90 transition-all duration-200 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {mode === 'login' ? 'Sign In' : 'Create Account'}
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  {mode === 'login' ? 'Signing In...' : 'Creating Account...'}
+                </span>
+              ) : (
+                mode === 'login' ? 'Sign In' : 'Create Account'
+              )}
             </button>
 
             {/* Terms & Privacy - Sign Up Only */}

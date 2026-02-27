@@ -42,7 +42,7 @@ services:
     restart: always
 
   mysql:
-    image: mysql:8
+    image: mysql:8.0
     container_name: havjeang-mysql
     restart: always
     env_file:
