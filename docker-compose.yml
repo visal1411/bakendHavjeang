@@ -4,11 +4,12 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: havjeang-frontend
+    command: sh -c "npm ci && npm run dev"
     ports:
       - "5173:5173"
     environment:
-      - NODE_ENV=production
-    restart: unless-stopped
+      - NODE_ENV=development
+      - VITE_PROXY_TARGET=http://backend:8080
     healthcheck:
       test:
         [
@@ -23,6 +24,11 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    volumes:
+      - ./frontend:/app:delegated
+      - /app/node_modules
+    depends_on:
+      - backend
     networks:
       - havjeang-network
 
@@ -42,7 +48,7 @@ services:
     restart: always
 
   mysql:
-    image: mysql:8.0
+    image: mysql:8
     container_name: havjeang-mysql
     restart: always
     env_file:

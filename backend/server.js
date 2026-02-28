@@ -51,7 +51,8 @@ const startServer = async () => {
   await connectDB();
   // Start background scheduler that auto-cancels old pending service requests
   startRequestExpiryScheduler();
-  httpServer.listen(PORT, () => {
+  // Bind to 0.0.0.0 so the server is reachable from other Docker containers
+  httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📡 Socket.IO server initialized`);
   });
