@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { authService } from '@/services';
 import { Eye, EyeOff, Phone, Lock, User, Briefcase, Award, Upload, Wrench, UserCircle, MapPin, Clock } from 'lucide-react';
-import { phnomPenhDistricts, districtsByProvince } from '../../data/mockData';
 
 /**
  * AuthPage Component
@@ -14,9 +13,9 @@ import { phnomPenhDistricts, districtsByProvince } from '../../data/mockData';
  * 1. User selects Sign Up mode
  * 2. User selects role (Customer or Mechanic) - STORED PERMANENTLY
  * 3. User fills in role-specific fields:
- *    - Customer: Phone, Password, Confirm Password
- *    - Mechanic: Full Name, Phone, Password, Confirm Password, Workshop Name, 
- *                Service Location, Years of Experience, Main Service Type
+ *    - Customer: Phone, Password, Confirm Password, Location (province)
+ *    - Mechanic: Full Name, Phone, Password, Confirm Password, Work Hours
+ *      (location captured automatically via Geolocation)
  * 4. On submit: Store user with role in mock database
  * 
  * Login Flow:
@@ -46,13 +45,12 @@ const AuthPage = () => {
     phone: '',
     password: '',
     confirmPassword: '',
-    workshopName: '',
-    serviceLocation: '',
-    experience: '',
-    serviceType: '',
-    location: '',
+    // mechanic fields not needed in payload are dropped
+    location: '',          // used only for customer
     workHourStart: '',
     workHourEnd: '',
+    mechanicLat: '',
+    mechanicLng: '',
   });
 
   // Redirect if already authenticated
@@ -71,13 +69,30 @@ const AuthPage = () => {
     if (role === 'customer') {
       setFormData(prev => ({
         ...prev,
-        workshopName: '',
-        serviceLocation: '',
-        experience: '',
-        serviceType: '',
         workHourStart: '',
         workHourEnd: '',
+        mechanicLat: '',
+        mechanicLng: '',
       }));
+    }
+  }, [role]);
+
+  // Attempt to capture current location when mechanic role is selected
+  useEffect(() => {
+    if (role === 'mechanic' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setFormData(prev => ({
+            ...prev,
+            mechanicLat: pos.coords.latitude.toString(),
+            mechanicLng: pos.coords.longitude.toString(),
+          }));
+        },
+        (err) => {
+          console.warn('Geolocation error', err);
+        },
+        { enableHighAccuracy: true }
+      );
     }
   }, [role]);
 
@@ -88,13 +103,11 @@ const AuthPage = () => {
       phone: '',
       password: '',
       confirmPassword: '',
-      workshopName: '',
-      serviceLocation: '',
-      experience: '',
-      serviceType: '',
       location: '',
       workHourStart: '',
       workHourEnd: '',
+      mechanicLat: '',
+      mechanicLng: '',
     });
     setError('');
   }, [mode]);
@@ -102,17 +115,7 @@ const AuthPage = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
 
-    // If location (province) changes, clear the district selection
-    if (name === 'location') {
-      setFormData({
-        ...formData,
-        [name]: value,
-        serviceLocation: '' // Clear district when province changes
-      });
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
-
+    setFormData({ ...formData, [name]: value });
     setError(''); // Clear error when user types
   };
 
@@ -133,7 +136,7 @@ const AuthPage = () => {
         }
 
         // Validate required fields
-        if (!formData.location) {
+        if (role === 'customer' && !formData.location) {
           setError('Please select your location');
           setLoading(false);
           return;
@@ -141,9 +144,8 @@ const AuthPage = () => {
 
         // Validate mechanic-specific fields
         if (role === 'mechanic') {
-          if (!formData.fullName || !formData.workshopName || !formData.serviceLocation ||
-            !formData.experience || !formData.serviceType) {
-            setError('Please fill in all required fields');
+          if (!formData.fullName) {
+            setError('Please fill in your name');
             setLoading(false);
             return;
           }
@@ -154,6 +156,11 @@ const AuthPage = () => {
           }
           if (formData.workHourStart >= formData.workHourEnd) {
             setError('End time must be after start time');
+            setLoading(false);
+            return;
+          }
+          if (!formData.mechanicLat || !formData.mechanicLng) {
+            setError('Unable to determine location. Please allow location access.');
             setLoading(false);
             return;
           }
@@ -171,8 +178,8 @@ const AuthPage = () => {
         if (role === 'mechanic') {
           const workHours = `${formData.workHourStart}-${formData.workHourEnd}`;
           registrationData.working_hours = workHours;
-          // Note: You may need to add mechanic_lat and mechanic_lng based on serviceLocation
-          // For now, we'll use default coordinates or you can add a geocoding service
+          registrationData.mechanic_lat = parseFloat(formData.mechanicLat);
+          registrationData.mechanic_lng = parseFloat(formData.mechanicLng);
         }
 
         // Call backend API to register
@@ -499,8 +506,8 @@ const AuthPage = () => {
               </div>
             )}
 
-            {/* Location - Sign Up Only */}
-            {mode === 'signup' && (
+            {/* Location - Sign Up Only (customers only) */}
+            {mode === 'signup' && role === 'customer' && (
               <div>
                 <label className="block text-sm font-semibold text-text-primary mb-2">
                   Location
@@ -530,112 +537,7 @@ const AuthPage = () => {
               </div>
             )}
 
-            {/* Workshop/Garage Name - Mechanic Sign Up Only */}
-            {mode === 'signup' && role === 'mechanic' && (
-              <div>
-                <label className="block text-sm font-semibold text-text-primary mb-2">
-                  Workshop / Garage Name
-                </label>
-                <div className="relative">
-                  <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary" />
-                  <input
-                    type="text"
-                    name="workshopName"
-                    value={formData.workshopName}
-                    onChange={handleInputChange}
-                    className="w-full pl-12 pr-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                    placeholder="Your workshop or garage name"
-                    required
-                  />
-                </div>
-              </div>
-            )}
 
-            {/* Service Location - Mechanic Sign Up Only */}
-            {mode === 'signup' && role === 'mechanic' && (
-              <div>
-                <label className="block text-sm font-semibold text-text-primary mb-2">
-                  Service Location (District)
-                </label>
-                <div className="relative">
-                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary pointer-events-none z-10" />
-                  <select
-                    name="serviceLocation"
-                    value={formData.serviceLocation}
-                    onChange={handleInputChange}
-                    className="w-full pl-12 pr-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all appearance-none cursor-pointer"
-                    required
-                    disabled={!formData.location}
-                  >
-                    <option value="">Select your district...</option>
-                    {formData.location && districtsByProvince[formData.location] &&
-                      districtsByProvince[formData.location].map(district => (
-                        <option key={district.id} value={district.id}>
-                          {district.label}
-                        </option>
-                      ))}
-                  </select>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <svg className="w-5 h-5 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  {formData.location
-                    ? `Select the district where you provide services in ${formData.location}`
-                    : 'Please select a province first'}
-                </p>
-              </div>
-            )}
-
-            {/* Years of Experience - Mechanic Sign Up Only */}
-            {mode === 'signup' && role === 'mechanic' && (
-              <div>
-                <label className="block text-sm font-semibold text-text-primary mb-2">
-                  Years of Experience
-                </label>
-                <div className="relative">
-                  <Award className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary" />
-                  <input
-                    type="number"
-                    name="experience"
-                    value={formData.experience}
-                    onChange={handleInputChange}
-                    className="w-full pl-12 pr-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                    placeholder="Years of experience"
-                    min="0"
-                    required
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Main Service Type - Mechanic Sign Up Only */}
-            {mode === 'signup' && role === 'mechanic' && (
-              <div>
-                <label className="block text-sm font-semibold text-text-primary mb-2">
-                  Main Service Type
-                </label>
-                <select
-                  name="serviceType"
-                  value={formData.serviceType}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all appearance-none cursor-pointer"
-                  required
-                >
-                  <option value="">Select main service type</option>
-                  <option value="general">General Repair</option>
-                  <option value="engine">Engine Repair</option>
-                  <option value="tire">Tire Service</option>
-                  <option value="battery">Battery Service</option>
-                  <option value="electrical">Electrical Systems</option>
-                  <option value="brake">Brake Service</option>
-                  <option value="transmission">Transmission</option>
-                  <option value="bodywork">Bodywork & Paint</option>
-                </select>
-              </div>
-            )}
 
             {/* Work Hours - Mechanic Sign Up Only */}
             {mode === 'signup' && role === 'mechanic' && (
