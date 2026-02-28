@@ -34,7 +34,7 @@ import { phnomPenhDistricts, districtsByProvince } from '../../data/mockData';
 const AuthPage = () => {
   const navigate = useNavigate();
   const { login, isAuthenticated, user } = useAuth();
-  
+
   const [mode, setMode] = useState('login'); // 'login' or 'signup'
   const [role, setRole] = useState('customer'); // 'customer' or 'mechanic' - ONLY for signup
   const [showPassword, setShowPassword] = useState(false);
@@ -71,7 +71,6 @@ const AuthPage = () => {
     if (role === 'customer') {
       setFormData(prev => ({
         ...prev,
-        fullName: '',
         workshopName: '',
         serviceLocation: '',
         experience: '',
@@ -102,18 +101,18 @@ const AuthPage = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    
+
     // If location (province) changes, clear the district selection
     if (name === 'location') {
-      setFormData({ 
-        ...formData, 
+      setFormData({
+        ...formData,
         [name]: value,
         serviceLocation: '' // Clear district when province changes
       });
     } else {
       setFormData({ ...formData, [name]: value });
     }
-    
+
     setError(''); // Clear error when user types
   };
 
@@ -125,7 +124,7 @@ const AuthPage = () => {
     try {
       if (mode === 'signup') {
         // REGISTRATION LOGIC
-        
+
         // Validate password confirmation
         if (formData.password !== formData.confirmPassword) {
           setError('Passwords do not match');
@@ -142,8 +141,8 @@ const AuthPage = () => {
 
         // Validate mechanic-specific fields
         if (role === 'mechanic') {
-          if (!formData.fullName || !formData.workshopName || !formData.serviceLocation || 
-              !formData.experience || !formData.serviceType) {
+          if (!formData.fullName || !formData.workshopName || !formData.serviceLocation ||
+            !formData.experience || !formData.serviceType) {
             setError('Please fill in all required fields');
             setLoading(false);
             return;
@@ -162,7 +161,7 @@ const AuthPage = () => {
 
         // Prepare registration data for backend
         const registrationData = {
-          name: role === 'mechanic' ? formData.fullName : formData.phone, // Backend expects 'name'
+          name: formData.fullName, // Backend expects 'name'
           phone: formData.phone,
           password: formData.password,
           usertype: role, // 'customer' or 'mechanic'
@@ -208,7 +207,7 @@ const AuthPage = () => {
 
       } else {
         // LOGIN LOGIC - NO ROLE SELECTION
-        
+
         // Call backend API to authenticate
         const response = await authService.login({
           phone: formData.phone,
@@ -255,13 +254,13 @@ const AuthPage = () => {
 
   return (
     <div className="min-h-screen flex bg-gray-50">
-      {/* Left Panel - Marketing/Image Section */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#155DFC] to-[#0d3d9a] relative overflow-hidden">
+      {/* Left Panel - Marketing/Image Section (Sticky) */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#155DFC] to-[#0d3d9a] relative overflow-hidden sticky top-0 h-screen">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl"></div>
           <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl"></div>
         </div>
-        
+
         <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20 text-white">
           <div className="mb-12">
             <div className="w-20 h-20 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-8 shadow-xl">
@@ -298,8 +297,8 @@ const AuthPage = () => {
         </div>
       </div>
 
-      {/* Right Panel - Form Section */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-8">
+      {/* Right Panel - Form Section (Scrollable) */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-8 overflow-y-auto">
         <div className="w-full max-w-md">
           {/* Logo for Mobile */}
           <div className="lg:hidden mb-8 text-center">
@@ -314,21 +313,19 @@ const AuthPage = () => {
             <div className="flex bg-white rounded-xl p-1.5 shadow-sm border border-gray-200">
               <button
                 onClick={() => setMode('login')}
-                className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-200 ${
-                  mode === 'login'
-                    ? 'bg-primary text-white shadow-md'
-                    : 'text-text-secondary hover:text-text-primary'
-                }`}
+                className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-200 ${mode === 'login'
+                  ? 'bg-primary text-white shadow-md'
+                  : 'text-text-secondary hover:text-text-primary'
+                  }`}
               >
                 Login
               </button>
               <button
                 onClick={() => setMode('signup')}
-                className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-200 ${
-                  mode === 'signup'
-                    ? 'bg-primary text-white shadow-md'
-                    : 'text-text-secondary hover:text-text-primary'
-                }`}
+                className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-200 ${mode === 'signup'
+                  ? 'bg-primary text-white shadow-md'
+                  : 'text-text-secondary hover:text-text-primary'
+                  }`}
               >
                 Sign Up
               </button>
@@ -341,8 +338,8 @@ const AuthPage = () => {
               {mode === 'login' ? 'Welcome back' : 'Get started'}
             </h2>
             <p className="text-text-secondary text-base">
-              {mode === 'login' 
-                ? 'Enter your phone number and password to login' 
+              {mode === 'login'
+                ? 'Enter your phone number and password to login'
                 : 'Create your account to continue'}
             </p>
           </div>
@@ -364,19 +361,16 @@ const AuthPage = () => {
                 <button
                   type="button"
                   onClick={() => setRole('customer')}
-                  className={`p-5 rounded-xl border-2 transition-all duration-200 ${
-                    role === 'customer'
-                      ? 'border-primary bg-primary/5 shadow-sm'
-                      : 'border-gray-200 hover:border-gray-300 bg-white'
-                  }`}
+                  className={`p-5 rounded-xl border-2 transition-all duration-200 ${role === 'customer'
+                    ? 'border-primary bg-primary/5 shadow-sm'
+                    : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
                 >
-                  <UserCircle className={`w-10 h-10 mx-auto mb-3 ${
-                    role === 'customer' ? 'text-primary' : 'text-text-secondary'
-                  }`} />
+                  <UserCircle className={`w-10 h-10 mx-auto mb-3 ${role === 'customer' ? 'text-primary' : 'text-text-secondary'
+                    }`} />
                   <div className="text-center">
-                    <div className={`font-semibold text-base mb-1 ${
-                      role === 'customer' ? 'text-primary' : 'text-text-primary'
-                    }`}>
+                    <div className={`font-semibold text-base mb-1 ${role === 'customer' ? 'text-primary' : 'text-text-primary'
+                      }`}>
                       Customer
                     </div>
                     <div className="text-xs text-text-secondary">
@@ -388,19 +382,16 @@ const AuthPage = () => {
                 <button
                   type="button"
                   onClick={() => setRole('mechanic')}
-                  className={`p-5 rounded-xl border-2 transition-all duration-200 ${
-                    role === 'mechanic'
-                      ? 'border-primary bg-primary/5 shadow-sm'
-                      : 'border-gray-200 hover:border-gray-300 bg-white'
-                  }`}
+                  className={`p-5 rounded-xl border-2 transition-all duration-200 ${role === 'mechanic'
+                    ? 'border-primary bg-primary/5 shadow-sm'
+                    : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
                 >
-                  <Wrench className={`w-10 h-10 mx-auto mb-3 ${
-                    role === 'mechanic' ? 'text-primary' : 'text-text-secondary'
-                  }`} />
+                  <Wrench className={`w-10 h-10 mx-auto mb-3 ${role === 'mechanic' ? 'text-primary' : 'text-text-secondary'
+                    }`} />
                   <div className="text-center">
-                    <div className={`font-semibold text-base mb-1 ${
-                      role === 'mechanic' ? 'text-primary' : 'text-text-primary'
-                    }`}>
+                    <div className={`font-semibold text-base mb-1 ${role === 'mechanic' ? 'text-primary' : 'text-text-primary'
+                      }`}>
                       Mechanic
                     </div>
                     <div className="text-xs text-text-secondary">
@@ -414,8 +405,8 @@ const AuthPage = () => {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Full Name - Mechanic Sign Up Only */}
-            {mode === 'signup' && role === 'mechanic' && (
+            {/* Full Name - Sign Up (all roles) */}
+            {mode === 'signup' && (
               <div>
                 <label className="block text-sm font-semibold text-text-primary mb-2">
                   Full Name
@@ -577,7 +568,7 @@ const AuthPage = () => {
                     disabled={!formData.location}
                   >
                     <option value="">Select your district...</option>
-                    {formData.location && districtsByProvince[formData.location] && 
+                    {formData.location && districtsByProvince[formData.location] &&
                       districtsByProvince[formData.location].map(district => (
                         <option key={district.id} value={district.id}>
                           {district.label}
@@ -591,8 +582,8 @@ const AuthPage = () => {
                   </div>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  {formData.location 
-                    ? `Select the district where you provide services in ${formData.location}` 
+                  {formData.location
+                    ? `Select the district where you provide services in ${formData.location}`
                     : 'Please select a province first'}
                 </p>
               </div>

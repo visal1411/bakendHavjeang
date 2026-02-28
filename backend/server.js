@@ -20,8 +20,9 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CORS_ORIGIN || "*",
+    origin: process.env.CORS_ORIGIN,
     methods: ["GET", "POST"],
+    credentials: true,
   },
 });
 
@@ -31,9 +32,9 @@ initializeSocket(io);
 // Middleware
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "*",
+    origin: process.env.CORS_ORIGIN,
     credentials: true,
-  }),
+  })
 );
 app.use(express.json());
 
