@@ -144,6 +144,9 @@ export const ExploreView = ({
         onCategorySelect={onCategorySelect}
         onMenuClick={toggleSidebar}
         onMechanicSelect={onMechanicSelect}
+        locationPermission={permission}
+        isLoadingLocation={isLoading}
+        retryLocation={retry}
       />
 
       {/* Recenter Map Button - Only show when user location is available */}

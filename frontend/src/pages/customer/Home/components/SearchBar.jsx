@@ -16,7 +16,10 @@ export const SearchBar = ({
   selectedCategory, 
   onCategorySelect,
   onMenuClick,
-  onMechanicSelect
+  onMechanicSelect,
+  locationPermission,
+  isLoadingLocation,
+  retryLocation
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [filteredResults, setFilteredResults] = useState([]);
@@ -123,7 +126,7 @@ export const SearchBar = ({
           className="bg-white rounded-2xl flex-1 shadow-lg hover:shadow-xl transition-all relative border-0"
           whileFocus={{ boxShadow: '0 8px 24px rgba(21, 93, 252, 0.15)' }}
         >
-          <div className="relative">
+          <div className="relative flex items-center">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none" />
             <Input
               type="text"
@@ -137,6 +140,27 @@ export const SearchBar = ({
               }}
               className="pl-12 pr-12 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 transition-all text-sm font-medium h-12 text-gray-700 placeholder:text-gray-400"
             />
+            {/* Enable Live Location button, right side of input */}
+            {locationPermission === 'denied' && (
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.04 }}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                onClick={retryLocation}
+                disabled={isLoadingLocation}
+                className="ml-2 bg-gradient-to-r from-primary to-blue-500 text-white px-4 py-2 rounded-full shadow-md hover:shadow-lg transition-all flex items-center gap-2 font-semibold text-sm group focus:outline-none focus:ring-2 focus:ring-primary/40 active:scale-95"
+                aria-label="Enable Live Location"
+              >
+                <svg className="w-4 h-4 mr-1 text-white group-active:rotate-12 transition-transform" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 19v-7m0 0V5m0 7h7m-7 0H5"/></svg>
+                <span className="hidden md:inline-block">Enable Location</span>
+                <span className="inline-block md:hidden">Enable</span>
+                {isLoadingLocation && (
+                  <svg className="animate-spin ml-2 w-4 h-4 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+                )}
+              </motion.button>
+            )}
             <AnimatePresence>
               {searchQuery && (
                 <motion.div

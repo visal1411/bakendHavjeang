@@ -426,7 +426,7 @@ const AuthPage = () => {
                     value={formData.fullName}
                     onChange={handleInputChange}
                     className="w-full pl-12 pr-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                    placeholder="Enter your full name"
+                    placeholder="Lyhai67"
                     required
                   />
                 </div>
@@ -446,7 +446,7 @@ const AuthPage = () => {
                   value={formData.phone}
                   onChange={handleInputChange}
                   className="w-full pl-12 pr-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                  placeholder="+1 (555) 000-0000"
+                  placeholder="095736767"
                   required
                 />
               </div>
