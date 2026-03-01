@@ -182,6 +182,9 @@ const AuthPage = () => {
           registrationData.mechanic_lng = parseFloat(formData.mechanicLng);
         }
 
+        // DEBUG: Log what we're sending
+        console.log('Sending registration data:', registrationData);
+
         // Call backend API to register
         const registerResponse = await authService.register(registrationData);
 

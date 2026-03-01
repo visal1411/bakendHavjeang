@@ -77,7 +77,7 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: "Invalid phone or password" });
     }
 
-    const token = jwt.sign({ id: user.id, role: user.usertype }, JWT_SECRET, {
+    const token = jwt.sign({ id: user.id, usertype: user.usertype }, JWT_SECRET, {
       expiresIn: JWT_EXPIRE,
     });
     const header = JSON.parse(

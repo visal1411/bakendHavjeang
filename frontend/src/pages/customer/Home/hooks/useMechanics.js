@@ -72,11 +72,22 @@ export const useMechanics = (
         return;
       }
 
+      const [lat, lng] = Array.isArray(userLocation)
+        ? userLocation
+        : [userLocation?.lat, userLocation?.lng];
+
+      if (typeof lat !== "number" || typeof lng !== "number") {
+        setMechanics([]);
+        setFilteredMechanics([]);
+        setIsLoading(false);
+        return;
+      }
+
       try {
         setIsLoading(true);
         const response = await serviceRequestsService.getNearbyMechanics({
-          lat: userLocation.lat,
-          lng: userLocation.lng,
+          lat,
+          lng,
         });
 
         // Transform API response to match expected format
