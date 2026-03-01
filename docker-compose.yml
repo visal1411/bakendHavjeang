@@ -3,11 +3,13 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      target: development  # Change to 'production' for prod build
     container_name: havjeang-frontend
+    command: sh -c "npm run dev"
     ports:
       - "5173:5173"
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development  # Change to 'production' for prod
     restart: unless-stopped
     healthcheck:
       test:
@@ -23,6 +25,11 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    volumes:
+      - ./frontend:/app:delegated
+      - /app/node_modules
+    depends_on:
+      - backend
     networks:
       - havjeang-network
 
