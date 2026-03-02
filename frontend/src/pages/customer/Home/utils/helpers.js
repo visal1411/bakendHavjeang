@@ -1,9 +1,10 @@
 /**
  * Calculate trip fee based on distance and base rate
+ * Uses the trip_price already calculated by the backend
  */
 export const calculateTripFee = (mechanic) => {
-  const fee = mechanic.distance * mechanic.baseTripFee;
-  return fee.toFixed(2);
+  // Use the backend-calculated trip_price directly (already in base units)
+  return mechanic.trip_price || 0;
 };
 
 /**

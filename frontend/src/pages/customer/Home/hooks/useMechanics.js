@@ -5,28 +5,6 @@ import { serviceRequestsService } from "@/services";
 const RECOMMENDED_ZONE_KM = 5; // Mechanics within 5km are recommended
 
 /**
- * Calculate distance between two coordinates using Haversine formula
- * @param {number} lat1 - First latitude
- * @param {number} lon1 - First longitude
- * @param {number} lat2 - Second latitude
- * @param {number} lon2 - Second longitude
- * @returns {number} Distance in kilometers
- */
-const calculateDistance = (lat1, lon1, lat2, lon2) => {
-  const R = 6371; // Earth's radius in km
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-};
-
-/**
  * useMechanics Hook
  *
  * Manages mechanics data with real-time filtering by search query, category, and distance.
@@ -60,23 +38,20 @@ export const useMechanics = (
   const [isLoading, setIsLoading] = useState(true);
   const [maxDistance, setMaxDistance] = useState(initialMaxDistance);
 
+  const [userLat, userLng] = Array.isArray(userLocation)
+    ? userLocation
+    : [userLocation?.lat, userLocation?.lng];
+
+  const hasValidUserLocation =
+    typeof userLat === "number" && Number.isFinite(userLat) &&
+    typeof userLng === "number" && Number.isFinite(userLng);
+
   // Initialize mechanics on mount
   useEffect(() => {
     const fetchMechanics = async () => {
       // Only fetch if we have user location
-      if (!userLocation) {
+      if (!hasValidUserLocation) {
         // Set empty arrays if no location available
-        setMechanics([]);
-        setFilteredMechanics([]);
-        setIsLoading(false);
-        return;
-      }
-
-      const [lat, lng] = Array.isArray(userLocation)
-        ? userLocation
-        : [userLocation?.lat, userLocation?.lng];
-
-      if (typeof lat !== "number" || typeof lng !== "number") {
         setMechanics([]);
         setFilteredMechanics([]);
         setIsLoading(false);
@@ -86,23 +61,34 @@ export const useMechanics = (
       try {
         setIsLoading(true);
         const response = await serviceRequestsService.getNearbyMechanics({
-          lat,
-          lng,
+          lat: userLat,
+          lng: userLng,
         });
 
         // Transform API response to match expected format
-        const mechanicsWithDistance = response.map((mechanic) => ({
-          id: mechanic.id,
-          name: mechanic.name,
-          lat: mechanic.mechanic_lat,
-          lng: mechanic.mechanic_lng,
-          distance: mechanic.distance,
-          available: true, // You can add availability logic
-          services: mechanic.services || [], // Services from backend
-          location: mechanic.location || "Unknown", // You may need to geocode this
-          phone: mechanic.phone,
-        }));
+        const mechanicsWithDistance = response.map((mechanic) => {
+          const tripPrice = mechanic.trip_price ?? null;
+          const numericTripPrice = tripPrice !== null ? Number(tripPrice) : null;
 
+          console.log(`📍 Transforming ${mechanic.name}: trip_price=${mechanic.trip_price} (raw) → Number(${tripPrice}) → ${numericTripPrice}`);
+
+          return {
+            id: mechanic.id,
+            name: mechanic.name,
+            lat: mechanic.mechanic_lat,
+            lng: mechanic.mechanic_lng,
+            distance: Number(mechanic.distance),
+            trip_price: numericTripPrice,
+            rating: 4.5,
+            totalReviews: 0,
+            available: true,
+            services: mechanic.services || [],
+            location: mechanic.location || "Unknown",
+            phone: mechanic.phone,
+          };
+        });
+
+        console.log('✅ Mechanics transformed:', mechanicsWithDistance);
         setMechanics(mechanicsWithDistance);
         setFilteredMechanics(mechanicsWithDistance);
       } catch (error) {
@@ -116,7 +102,7 @@ export const useMechanics = (
     };
 
     fetchMechanics();
-  }, [userLocation]);
+  }, [hasValidUserLocation, userLat, userLng]);
 
   // Filter mechanics based on search and category - ALWAYS SHOW FULL LIST
   useEffect(() => {
@@ -141,37 +127,27 @@ export const useMechanics = (
     // NOTE: NO DISTANCE FILTERING - Always show full list regardless of distance
     // This ensures all mechanics are visible to customers at all times
 
-    // Update distances for all filtered mechanics
-    if (userLocation) {
-      filtered = filtered.map((m) => ({
-        ...m,
-        distance: calculateDistance(
-          userLocation.lat,
-          userLocation.lng,
-          m.lat,
-          m.lng,
-        ),
-      }));
-      // Sort by distance (closest first)
-      filtered.sort((a, b) => a.distance - b.distance);
+    // Backend already calculated distances via ORS - just sort by it
+    // Sort by distance (closest first)
+    filtered.sort((a, b) => {
+      if (a.distance === null) return 1;
+      if (b.distance === null) return -1;
+      return a.distance - b.distance;
+    });
 
-      // Categorize by service zone for visual emphasis
-      // Mechanics within 5km get special visual treatment (larger cards, animations)
-      const recommended = filtered.filter(
-        (m) => m.distance <= RECOMMENDED_ZONE_KM,
-      );
-      const distant = filtered.filter((m) => m.distance > RECOMMENDED_ZONE_KM);
+    // Categorize by service zone for visual emphasis
+    // Mechanics within 5km get special visual treatment (larger cards, animations)
+    const recommended = filtered.filter(
+      (m) => m.distance !== null && m.distance <= RECOMMENDED_ZONE_KM,
+    );
+    const distant = filtered.filter(
+      (m) => m.distance === null || m.distance > RECOMMENDED_ZONE_KM,
+    );
 
-      setRecommendedMechanics(recommended);
-      setDistantMechanics(distant);
-    } else {
-      // When no user location, show all mechanics as recommended (no distance calculation)
-      setRecommendedMechanics(filtered);
-      setDistantMechanics([]);
-    }
-
+    setRecommendedMechanics(recommended);
+    setDistantMechanics(distant);
     setFilteredMechanics(filtered);
-  }, [searchQuery, selectedCategory, mechanics, userLocation, maxDistance]);
+  }, [searchQuery, selectedCategory, mechanics, maxDistance]);
 
   const availableMechanics = filteredMechanics.filter((m) => m.available);
 

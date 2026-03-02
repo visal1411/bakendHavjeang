@@ -3,6 +3,7 @@ import { prisma } from "../config/db.js";
 import { calculateTripPrice, calculateTotalPrice, calculateUnknownTotal } from "../service/pricingService.js";
 import { notifyMechanic, notifyCustomer, isUserOnline } from "../service/socketService.js";
 import { sendPushToUser } from "../service/pushService.js";
+import { getDistanceKmORS } from "../service/distance/orsDistance.js";
 
 // ============================
 // CUSTOMER: Create service request
@@ -55,14 +56,14 @@ export const createServiceRequest = async (req, res) => {
     let totalPrice = services.length
       ? calculateTotalPrice(tripPrice, services)
       : 0;
-    
+
     console.log("DEBUG PRICES:", {
-  mechanicLat: mechanic.mechanic_lat,
-  mechanicLng: mechanic.mechanic_lng,
-  tripDistanceKm,
-  tripPrice,
-  isTripPriceNaN: Number.isNaN(tripPrice)
-});
+      mechanicLat: mechanic.mechanic_lat,
+      mechanicLng: mechanic.mechanic_lng,
+      tripDistanceKm,
+      tripPrice,
+      isTripPriceNaN: Number.isNaN(tripPrice)
+    });
 
     const request = await prisma.serviceRequest.create({
       data: {
@@ -79,7 +80,7 @@ export const createServiceRequest = async (req, res) => {
           ? { connect: serviceIds.map(id => ({ id })) }
           : undefined
       },
-      include: { 
+      include: {
         service: true,
         customer: {
           select: {
@@ -149,7 +150,7 @@ export const acceptProposedPrice = async (req, res) => {
       where: { id: requestId },
       data: { customerApproved: true, total_price: totalPrice, status: "accepted" }
     });
-    
+
     // Notify mechanic: WebSocket if online, otherwise Web Push
     if (request.mechanicId) {
       if (isUserOnline(request.mechanicId)) {
@@ -196,7 +197,7 @@ export const declineProposedPrice = async (req, res) => {
       where: { id: requestId },
       data: { customerApproved: false, status: "cancelled" }
     });
-    
+
     // Notify mechanic: WebSocket if online, otherwise Web Push
     if (request.mechanicId) {
       if (isUserOnline(request.mechanicId)) {
@@ -369,7 +370,7 @@ export const cancelServiceRequest = async (req, res) => {
       where: { id: requestId },
       data: { status: "cancelled" }
     });
-    
+
     // Notify mechanic: WebSocket if online, otherwise Web Push
     if (request.mechanicId) {
       const payload = {
@@ -406,22 +407,23 @@ export const cancelServiceRequest = async (req, res) => {
 export const getNearbyMechanics = async (req, res) => {
   try {
     const { lat, lng } = req.query;
+    console.log("🔍 getNearbyMechanics called with:", { lat, lng });
     if (!lat || !lng) return res.status(400).json({ message: "Location required" });
 
     const customerLocation = { lat: Number(lat), lng: Number(lng) };
-    
+
     // Fetch mechanics with their services
     const mechanics = await prisma.user.findMany({
-      where: { 
-        usertype: "mechanic", 
-        mechanic_lat: { not: null }, 
-        mechanic_lng: { not: null } 
+      where: {
+        usertype: "mechanic",
+        mechanic_lat: { not: null },
+        mechanic_lng: { not: null }
       },
-      select: { 
-        id: true, 
-        name: true, 
-        phone: true, 
-        mechanic_lat: true, 
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        mechanic_lat: true,
         mechanic_lng: true,
         working_hours: true,
         service: {
@@ -435,7 +437,64 @@ export const getNearbyMechanics = async (req, res) => {
       }
     });
 
-    res.json(mechanics);
+    console.log(`Found ${mechanics.length} mechanics, calculating distances...`);
+
+    // Calculate ORS distance for each mechanic
+    const mechanicsWithDistance = await Promise.all(
+      mechanics.map(async (mechanic) => {
+        try {
+          const mechanicLocation = {
+            lat: mechanic.mechanic_lat,
+            lng: mechanic.mechanic_lng
+          };
+
+          // Check if same location (avoid ORS API call)
+          const isSameLocation =
+            Math.abs(customerLocation.lat - mechanicLocation.lat) < 0.001 &&
+            Math.abs(customerLocation.lng - mechanicLocation.lng) < 0.001;
+
+          let distance;
+          let tripPrice;
+
+          if (isSameLocation) {
+            console.log(`Same location detected for mechanic ${mechanic.id}, returning 0km`);
+            distance = 0;
+            tripPrice = 0;
+          } else {
+            console.log(`Calling ORS for mechanic ${mechanic.id}`);
+            const { tripDistanceKm, tripPrice: calculatedTripPrice } = await calculateTripPrice(customerLocation, mechanicLocation);
+            distance = tripDistanceKm;
+            tripPrice = calculatedTripPrice;
+            console.log(`ORS returned ${distance}km (${tripPrice} fee) for mechanic ${mechanic.id}`);
+          }
+
+          return {
+            ...mechanic,
+            distance: distance < 0.01 ? 0 : Math.round(distance * 100) / 100,
+            trip_price: tripPrice,
+            services: mechanic.service.map(s => s.serviceType)
+          };
+        } catch (error) {
+          console.error(`Failed to calculate distance for mechanic ${mechanic.id}:`, error.message);
+          // Fallback: return mechanic without distance/price
+          return {
+            ...mechanic,
+            distance: null,
+            trip_price: null,
+            services: mechanic.service.map(s => s.serviceType)
+          };
+        }
+      })
+    );
+
+    // Sort by distance (closest first), mechanics without distance go last
+    mechanicsWithDistance.sort((a, b) => {
+      if (a.distance === null) return 1;
+      if (b.distance === null) return -1;
+      return a.distance - b.distance;
+    });
+
+    res.json(mechanicsWithDistance);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
@@ -452,7 +511,7 @@ export const getIncomingRequests = async (req, res) => {
       where: {
         OR: [
           { service: { some: { mechanicId } } },
-          { service: { none: {} }, OR: [ { mechanicId }, { mechanicId: null } ] }
+          { service: { none: {} }, OR: [{ mechanicId }, { mechanicId: null }] }
         ],
         status: "pending"
       },
@@ -677,7 +736,7 @@ export const proposeServicePrice = async (req, res) => {
       where: { id: requestId },
       data: { proposed_price, customerApproved: null, status: "proposed" }
     });
-    
+
     // Notify customer: WebSocket if online, otherwise Web Push
     const pricePayload = {
       message: 'Mechanic proposed a new price',
