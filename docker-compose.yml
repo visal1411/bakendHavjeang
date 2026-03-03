@@ -1,0 +1,69 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development  # Change to 'production' for prod build
+    container_name: havjeang-frontend
+    command: sh -c "npm run dev"
+    ports:
+      - "5173:5173"
+    environment:
+      - NODE_ENV=development  # Change to 'production' for prod
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:5173",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    volumes:
+      - ./frontend:/app:delegated
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - havjeang-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: havjeang-backend
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      - mysql
+    networks:
+      - havjeang-network
+    restart: always
+
+  mysql:
+    image: mysql:latest
+    container_name: havjeang-mysql
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - havjeang-network
+
+networks:
+  havjeang-network:
+    driver: bridge
+
+volumes:
+  db_data:

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>API Test</title>
+  </head>
+  <body>
+    <h1>Backend Connection Test</h1>
+    <button onclick="testLogin()">Test Login</button>
+    <pre id="result"></pre>
+
+    <script>
+      async function testLogin() {
+        const result = document.getElementById("result");
+        result.textContent = "Testing...";
+
+        try {
+          const response = await fetch("http://localhost:8080/api/auth/login", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              phone: "0123456389",
+              password: "12345678",
+            }),
+          });
+
+          const data = await response.json();
+          result.textContent = JSON.stringify(data, null, 2);
+
+          if (data.token) {
+            result.textContent +=
+              "\n\n✅ SUCCESS! Backend is working correctly.";
+          }
+        } catch (error) {
+          result.textContent = "❌ ERROR: " + error.message;
+        }
+      }
+    </script>
+  </body>
+</html>
