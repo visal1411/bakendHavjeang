@@ -3,7 +3,7 @@ import { Search, X, Menu, MapPin, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { categories, mockMechanics } from '@/data/mockData';
+import { categories } from '@/data/mockData';
 import { fadeInDown, slideInLeft, buttonPress, fadeIn, staggerContainer, staggerItem } from '@/lib/animations';
 
 /**
@@ -19,7 +19,8 @@ export const SearchBar = ({
   onMechanicSelect,
   locationPermission,
   isLoadingLocation,
-  retryLocation
+  retryLocation,
+  mechanicOptions = []
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [filteredResults, setFilteredResults] = useState([]);
@@ -28,19 +29,25 @@ export const SearchBar = ({
 
   // Filter mechanics based on search query
   useEffect(() => {
+    const availableMechanics = Array.isArray(mechanicOptions) ? mechanicOptions : [];
+
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      const results = mockMechanics.filter(mechanic => {
+      const results = availableMechanics.filter(mechanic => {
+        const mechanicName = mechanic?.name || '';
+        const mechanicLocation = mechanic?.location || '';
         // Prioritize matches from the beginning
-        const nameMatch = mechanic.name.toLowerCase().startsWith(query);
-        const partialMatch = mechanic.name.toLowerCase().includes(query);
-        const locationMatch = mechanic.location.toLowerCase().includes(query);
+        const nameMatch = mechanicName.toLowerCase().startsWith(query);
+        const partialMatch = mechanicName.toLowerCase().includes(query);
+        const locationMatch = mechanicLocation.toLowerCase().includes(query);
         
         return nameMatch || partialMatch || locationMatch;
       }).sort((a, b) => {
         // Prioritize results that start with the query
-        const aStarts = a.name.toLowerCase().startsWith(searchQuery.toLowerCase());
-        const bStarts = b.name.toLowerCase().startsWith(searchQuery.toLowerCase());
+        const aName = a?.name || '';
+        const bName = b?.name || '';
+        const aStarts = aName.toLowerCase().startsWith(searchQuery.toLowerCase());
+        const bStarts = bName.toLowerCase().startsWith(searchQuery.toLowerCase());
         if (aStarts && !bStarts) return -1;
         if (!aStarts && bStarts) return 1;
         return 0;
@@ -52,7 +59,7 @@ export const SearchBar = ({
       setFilteredResults([]);
       setIsDropdownOpen(false);
     }
-  }, [searchQuery]);
+  }, [searchQuery, mechanicOptions]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -203,46 +210,53 @@ export const SearchBar = ({
                   animate="animate"
                   className="py-2"
                 >
-                  {filteredResults.map((mechanic, index) => (
-                    <motion.div
-                      key={mechanic.id}
-                      variants={staggerItem}
-                      whileHover={{ backgroundColor: 'rgba(0,0,0,0.02)' }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => handleSelectMechanic(mechanic)}
-                      className="px-4 py-3 cursor-pointer border-b border-gray-50 last:border-0"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl flex items-center justify-center flex-shrink-0">
-                          <Search className="w-5 h-5 text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-semibold text-gray-900 mb-1">
-                            {highlightMatch(mechanic.name, searchQuery)}
-                          </h4>
-                          <div className="flex items-center gap-3 text-xs text-gray-600">
-                            <div className="flex items-center gap-1">
-                              <MapPin className="w-3 h-3" />
-                              <span className="truncate">{mechanic.location}</span>
+                  {filteredResults.map((mechanic) => {
+                    const mechanicName = mechanic?.name || 'Unknown mechanic';
+                    const mechanicLocation = mechanic?.location || 'Location not provided';
+                    const mechanicRating = mechanic?.rating ?? '—';
+                    const mechanicAvailable = mechanic?.available ?? false;
+
+                    return (
+                      <motion.div
+                        key={mechanic.id}
+                        variants={staggerItem}
+                        whileHover={{ backgroundColor: 'rgba(0,0,0,0.02)' }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => handleSelectMechanic(mechanic)}
+                        className="px-4 py-3 cursor-pointer border-b border-gray-50 last:border-0"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <Search className="w-5 h-5 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-semibold text-gray-900 mb-1">
+                              {highlightMatch(mechanicName, searchQuery)}
+                            </h4>
+                            <div className="flex items-center gap-3 text-xs text-gray-600">
+                              <div className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3" />
+                                <span className="truncate">{mechanicLocation}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
+                                <span>{mechanicRating}</span>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-1">
-                              <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
-                              <span>{mechanic.rating}</span>
+                            <div className="mt-1">
+                              <span className={`inline-block text-xs px-2 py-0.5 rounded-full ${
+                                mechanicAvailable 
+                                  ? 'bg-green-100 text-green-700' 
+                                  : 'bg-gray-100 text-gray-600'
+                              }`}>
+                                {mechanicAvailable ? 'Available' : 'Busy'}
+                              </span>
                             </div>
                           </div>
-                          <div className="mt-1">
-                            <span className={`inline-block text-xs px-2 py-0.5 rounded-full ${
-                              mechanic.available 
-                                ? 'bg-green-100 text-green-700' 
-                                : 'bg-gray-100 text-gray-600'
-                            }`}>
-                              {mechanic.available ? 'Available' : 'Busy'}
-                            </span>
-                          </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  ))}
+                      </motion.div>
+                    );
+                  })}
                 </motion.div>
               </motion.div>
             )}

@@ -1,26 +1,48 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Plus, 
-  Edit2, 
-  Trash2, 
-  Wrench, 
-  DollarSign, 
-  CheckCircle, 
-  XCircle, 
-  TrendingUp, 
-  Package, 
+import { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  Wrench,
+  DollarSign,
+  Package,
   Sparkles,
   Car,
-  Battery,
-  Settings,
-  Disc,
-  AlertOctagon
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
+  Bike,
+  Loader2
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import servicesService from "@/services/servicesService";
+
+const SERVICE_TYPE_OPTIONS = [
+  {
+    value: "moto",
+    label: "Motorcycle Service",
+    icon: Bike,
+    color: "bg-blue-100 text-blue-700 border-blue-300"
+  },
+  {
+    value: "car",
+    label: "Car Service",
+    icon: Car,
+    color: "bg-indigo-100 text-indigo-700 border-indigo-300"
+  }
+];
+
+const SERVICE_TYPE_META = SERVICE_TYPE_OPTIONS.reduce((acc, option) => {
+  acc[option.value] = option;
+  return acc;
+}, {});
+
+const INITIAL_FORM_STATE = {
+  name: "",
+  price: "",
+  serviceType: SERVICE_TYPE_OPTIONS[0].value
+};
 
 /**
  * ServicesManagement Component
@@ -28,129 +50,125 @@ import { Input } from '@/components/ui/input';
  * Interactive CRUD for managing mechanic's service offerings with beautiful UI
  */
 export const ServicesManagement = () => {
-  const [services, setServices] = useState([
-    {
-      id: 1,
-      name: 'Tire Repair/Replacement',
-      basePrice: 25.0,
-      category: 'tire',
-      description: 'Professional tire repair and replacement service',
-      isActive: true,
-    },
-    {
-      id: 2,
-      name: 'Battery Jump/Replace',
-      basePrice: 15.0,
-      category: 'battery',
-      description: 'Battery diagnosis, jump start, and replacement',
-      isActive: true,
-    },
-    {
-      id: 3,
-      name: 'Engine Diagnosis',
-      basePrice: 45.0,
-      category: 'engine',
-      description: 'Complete engine diagnostic and repair service',
-      isActive: true,
-    },
-    {
-      id: 4,
-      name: 'Brake Service',
-      basePrice: 35.0,
-      category: 'brake',
-      description: 'Brake inspection, pad replacement, and service',
-      isActive: false,
-    },
-  ]);
-
+  const [services, setServices] = useState([]);
   const [isAddingService, setIsAddingService] = useState(false);
   const [editingService, setEditingService] = useState(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    basePrice: '',
-    category: 'tire',
-    description: '',
-    isActive: true,
-  });
+  const [formData, setFormData] = useState(INITIAL_FORM_STATE);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [formError, setFormError] = useState("");
+  const [deletingId, setDeletingId] = useState(null);
 
-  const categories = [
-    { value: 'tire', label: 'Tire', icon: Disc, color: 'bg-blue-100 text-blue-700 border-blue-300' },
-    { value: 'battery', label: 'Battery', icon: Battery, color: 'bg-blue-100 text-blue-700 border-blue-300' },
-    { value: 'engine', label: 'Engine', icon: Settings, color: 'bg-blue-100 text-blue-700 border-blue-300' },
-    { value: 'brake', label: 'Brake', icon: TrendingUp, color: 'bg-blue-100 text-blue-700 border-blue-300' },
-    { value: 'emergency', label: 'Emergency', icon: AlertOctagon, color: 'bg-blue-100 text-blue-700 border-blue-300' },
-    { value: 'other', label: 'Other', icon: Wrench, color: 'bg-blue-100 text-blue-700 border-blue-300' },
-  ];
+  const fetchServices = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await servicesService.getMyServices();
+      setServices(Array.isArray(data) ? data : []);
+    } catch (fetchError) {
+      const message = fetchError?.response?.data?.message ?? "Failed to load services.";
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const handleAddService = () => {
-    const price = parseFloat(formData.basePrice);
-    if (price < 0 || isNaN(price)) {
-      alert('Price must be a positive number');
+  useEffect(() => {
+    fetchServices();
+  }, [fetchServices]);
+
+  const resetForm = () => {
+    setFormData(INITIAL_FORM_STATE);
+    setIsAddingService(false);
+    setEditingService(null);
+    setFormError("");
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.name.trim()) {
+      setFormError("Service name is required");
       return;
     }
-    const newService = {
-      id: Date.now(),
-      ...formData,
-      basePrice: price,
+
+    if (formData.price === "") {
+      setFormError("Price is required");
+      return;
+    }
+
+    const numericPrice = Number(formData.price);
+    if (Number.isNaN(numericPrice) || numericPrice < 0) {
+      setFormError("Price must be a valid non-negative number");
+      return;
+    }
+
+    const payload = {
+      name: formData.name.trim(),
+      price: Math.round(numericPrice),
+      serviceType: formData.serviceType
     };
-    setServices([...services, newService]);
-    resetForm();
-  };
 
-  const handleUpdateService = () => {
-    const price = parseFloat(formData.basePrice);
-    if (price < 0 || isNaN(price)) {
-      alert('Price must be a positive number');
-      return;
+    setSubmitting(true);
+    setFormError("");
+
+    try {
+      if (editingService) {
+        const { service } = await servicesService.updateService(editingService.id, payload);
+        setServices((prev) => prev.map((item) => (item.id === service.id ? service : item)));
+      } else {
+        const { service } = await servicesService.createService(payload);
+        setServices((prev) => [...prev, service]);
+      }
+      resetForm();
+    } catch (submitError) {
+      const message = submitError?.response?.data?.message ?? "Unable to save service. Please try again.";
+      setFormError(message);
+    } finally {
+      setSubmitting(false);
     }
-    setServices(services.map(s => 
-      s.id === editingService.id 
-        ? { ...s, ...formData, basePrice: price }
-        : s
-    ));
-    resetForm();
-  };
-
-  const handleDeleteService = (id) => {
-    if (confirm('Are you sure you want to delete this service?')) {
-      setServices(services.filter(s => s.id !== id));
-    }
-  };
-
-  const handleToggleActive = (id) => {
-    setServices(services.map(s => 
-      s.id === id ? { ...s, isActive: !s.isActive } : s
-    ));
   };
 
   const handleEdit = (service) => {
     setEditingService(service);
     setFormData({
       name: service.name,
-      basePrice: service.basePrice.toString(),
-      category: service.category,
-      description: service.description,
-      isActive: service.isActive,
+      price: service.price?.toString() ?? "",
+      serviceType: service.serviceType ?? SERVICE_TYPE_OPTIONS[0].value
     });
     setIsAddingService(true);
   };
 
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      basePrice: '',
-      category: 'tire',
-      description: '',
-      isActive: true,
-    });
-    setIsAddingService(false);
-    setEditingService(null);
+  const handleDeleteService = async (id) => {
+    if (!confirm("Are you sure you want to delete this service?")) {
+      return;
+    }
+
+    setDeletingId(id);
+    try {
+      await servicesService.deleteService(id);
+      setServices((prev) => prev.filter((service) => service.id !== id));
+    } catch (deleteError) {
+      const message = deleteError?.response?.data?.message ?? "Unable to delete service.";
+      setError(message);
+    } finally {
+      setDeletingId(null);
+    }
   };
+
+  const totalServices = services.length;
+  const motoCount = services.filter((service) => service.serviceType === "moto").length;
+  const carCount = services.filter((service) => service.serviceType === "car").length;
+  const averagePrice = totalServices
+    ? (
+        services.reduce((sum, service) => sum + Number(service.price ?? 0), 0) /
+        totalServices
+      ).toFixed(2)
+    : "0.00";
 
   return (
     <div className="space-y-6">
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <motion.div
           whileHover={{ y: -4 }}
           className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-6 text-white shadow-xl"
@@ -158,7 +176,7 @@ export const ServicesManagement = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-blue-100 text-sm font-medium">Total Services</p>
-              <p className="text-3xl font-bold mt-1">{services.length}</p>
+              <p className="text-3xl font-bold mt-1">{totalServices}</p>
             </div>
             <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
               <Package className="w-6 h-6" />
@@ -172,11 +190,26 @@ export const ServicesManagement = () => {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-green-100 text-sm font-medium">Active Services</p>
-              <p className="text-3xl font-bold mt-1">{services.filter(s => s.isActive).length}</p>
+              <p className="text-green-100 text-sm font-medium">Moto Services</p>
+              <p className="text-3xl font-bold mt-1">{motoCount}</p>
             </div>
             <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-              <CheckCircle className="w-6 h-6" />
+              <Bike className="w-6 h-6" />
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          whileHover={{ y: -4 }}
+          className="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl p-6 text-white shadow-xl"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-indigo-100 text-sm font-medium">Car Services</p>
+              <p className="text-3xl font-bold mt-1">{carCount}</p>
+            </div>
+            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+              <Car className="w-6 h-6" />
             </div>
           </div>
         </motion.div>
@@ -188,9 +221,7 @@ export const ServicesManagement = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-blue-100 text-sm font-medium">Avg Price</p>
-              <p className="text-3xl font-bold mt-1">
-                ${services.length > 0 ? (services.reduce((sum, s) => sum + s.basePrice, 0) / services.length).toFixed(2) : '0.00'}
-              </p>
+              <p className="text-3xl font-bold mt-1">${averagePrice}</p>
             </div>
             <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
               <DollarSign className="w-6 h-6" />
@@ -222,6 +253,20 @@ export const ServicesManagement = () => {
           </motion.div>
         )}
       </div>
+
+      {error && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 flex items-center justify-between gap-4">
+          <span>{error}</span>
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-red-200 text-red-700 hover:bg-red-100"
+            onClick={fetchServices}
+          >
+            Retry
+          </Button>
+        </div>
+      )}
 
       {/* Add/Edit Form */}
       <AnimatePresence>
@@ -260,20 +305,20 @@ export const ServicesManagement = () => {
                     <div>
                       <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                         <DollarSign className="w-4 h-4 text-blue-600" />
-                        Base Price (USD) *
+                        Price (USD) *
                       </label>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">$</span>
                         <Input
                           type="number"
                           min="0"
-                          step="0.50"
+                          step="0.10"
                           placeholder="25.00"
-                          value={formData.basePrice}
+                          value={formData.price}
                           onChange={(e) => {
                             const value = e.target.value;
                             if (value === '' || parseFloat(value) >= 0) {
-                              setFormData({ ...formData, basePrice: value });
+                              setFormData({ ...formData, price: value });
                             }
                           }}
                           onKeyDown={(e) => {
@@ -288,63 +333,41 @@ export const ServicesManagement = () => {
 
                     <div>
                       <label className="text-sm font-semibold text-gray-700 mb-2 block">
-                        Category *
+                        Vehicle Type *
                       </label>
                       <select
                         className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all bg-white"
-                        value={formData.category}
-                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                        value={formData.serviceType}
+                        onChange={(e) => setFormData({ ...formData, serviceType: e.target.value })}
                       >
-                        {categories.map(cat => (
-                          <option key={cat.value} value={cat.value}>
-                            {cat.label}
+                        {SERVICE_TYPE_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
                           </option>
                         ))}
                       </select>
                     </div>
                   </div>
 
-                  <div>
-                    <label className="text-sm font-semibold text-gray-700 mb-2 block">
-                      Description
-                    </label>
-                    <textarea
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all min-h-[100px]"
-                      placeholder="Describe the service in detail..."
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    />
-                  </div>
-
-                  <motion.div 
-                    className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border-2 border-gray-200"
-                    whileHover={{ borderColor: '#2563eb' }}
-                  >
-                    <input
-                      type="checkbox"
-                      id="isActive"
-                      checked={formData.isActive}
-                      onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                      className="w-5 h-5 text-blue-600 rounded focus:ring-blue-400 cursor-pointer"
-                    />
-                    <label htmlFor="isActive" className="text-sm font-medium text-gray-700 cursor-pointer flex-1">
-                      Active (customers can request this service)
-                    </label>
-                    {formData.isActive ? (
-                      <CheckCircle className="w-5 h-5 text-blue-600" />
-                    ) : (
-                      <XCircle className="w-5 h-5 text-gray-400" />
-                    )}
-                  </motion.div>
+                  {formError && (
+                    <p className="text-sm text-red-600 font-medium">{formError}</p>
+                  )}
 
                   <div className="flex gap-3 pt-3">
                     <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
                       <Button
-                        onClick={editingService ? handleUpdateService : handleAddService}
-                        disabled={!formData.name || !formData.basePrice}
+                        onClick={handleSubmit}
+                        disabled={submitting || !formData.name || !formData.price}
                         className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {editingService ? 'Update Service' : 'Add Service'}
+                        {submitting ? (
+                          <span className="flex items-center justify-center gap-2">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            {editingService ? "Updating..." : "Saving..."}
+                          </span>
+                        ) : (
+                          editingService ? "Update Service" : "Add Service"
+                        )}
                       </Button>
                     </motion.div>
                     <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
@@ -365,121 +388,98 @@ export const ServicesManagement = () => {
       </AnimatePresence>
 
       {/* Services List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        <AnimatePresence>
-          {services.map((service, index) => {
-            const categoryInfo = categories.find(c => c.value === service.category);
-            return (
-              <motion.div
-                key={service.id}
-                initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: -20 }}
-                transition={{ delay: index * 0.05 }}
-                whileHover={{ y: -8, transition: { duration: 0.2 } }}
-                layout
-              >
-                <Card className={`overflow-hidden border-2 transition-all ${
-                  service.isActive 
-                    ? 'border-blue-200 hover:border-blue-400 shadow-card hover:shadow-xl' 
-                    : 'border-gray-200 opacity-60 hover:opacity-100'
-                }`}>
-                  {/* Color Bar */}
-                  <div className={`h-2 ${
-                    service.isActive ? 'bg-gradient-to-r from-blue-600 to-blue-700' : 'bg-gray-300'
-                  }`} />
-                  
-                  <CardContent className="p-5">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          {categoryInfo?.icon && <categoryInfo.icon className="w-6 h-6 text-blue-600" />}
-                          <h3 className="font-bold text-gray-900 text-lg">{service.name}</h3>
+      {loading ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <AnimatePresence>
+            {services.map((service, index) => {
+              const meta = SERVICE_TYPE_META[service.serviceType] ?? SERVICE_TYPE_OPTIONS[0];
+              const Icon = meta.icon;
+              const price = Number(service.price ?? 0);
+              return (
+                <motion.div
+                  key={service.id}
+                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: -20 }}
+                  transition={{ delay: index * 0.05 }}
+                  whileHover={{ y: -8, transition: { duration: 0.2 } }}
+                  layout
+                >
+                  <Card className="overflow-hidden border-2 border-blue-50 hover:border-blue-200 transition-all shadow-card hover:shadow-xl">
+                    <div className="h-2 bg-gradient-to-r from-blue-600 to-blue-700" />
+
+                    <CardContent className="p-5">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            {Icon && <Icon className="w-6 h-6 text-blue-600" />}
+                            <h3 className="font-bold text-gray-900 text-lg">{service.name}</h3>
+                          </div>
+                          <Badge className={`${meta.color} font-medium border`}>
+                            {meta.label}
+                          </Badge>
                         </div>
-                        <Badge className={`${categoryInfo?.color} font-medium border`}>
-                          {categoryInfo?.label}
-                        </Badge>
                       </div>
-                    </div>
 
-                    <div className="mb-4">
-                      <div className="flex items-baseline gap-1 mb-2">
-                        <DollarSign className="w-5 h-5 text-blue-600" />
-                        <span className="text-3xl font-bold text-blue-700">
-                          {service.basePrice.toFixed(2)}
-                        </span>
-                        <span className="text-sm text-gray-500">USD</span>
+                      <div className="mb-6">
+                        <div className="flex items-baseline gap-1">
+                          <DollarSign className="w-5 h-5 text-blue-600" />
+                          <span className="text-3xl font-bold text-blue-700">
+                            {price.toFixed(2)}
+                          </span>
+                          <span className="text-sm text-gray-500">USD</span>
+                        </div>
                       </div>
-                    </div>
 
-                    <p className="text-sm text-gray-600 mb-4 line-clamp-2 min-h-[40px]">
-                      {service.description}
-                    </p>
-
-                    {/* Status Badge */}
-                    <div className="mb-4">
-                      <Badge className={`${
-                        service.isActive 
-                          ? 'bg-blue-100 text-blue-700 border border-blue-300' 
-                          : 'bg-gray-100 text-gray-700 border border-gray-200'
-                      } flex items-center gap-1 w-fit`}>
-                        {service.isActive ? (
-                          <><CheckCircle className="w-3 h-3" /> Active</>
-                        ) : (
-                          <><XCircle className="w-3 h-3" /> Inactive</>
-                        )}
-                      </Badge>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                        <Button
-                          onClick={() => handleEdit(service)}
-                          variant="outline"
-                          size="sm"
-                          className="w-full border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white"
-                        >
-                          <Edit2 className="w-3.5 h-3.5 mr-1" />
-                          Edit
-                        </Button>
-                      </motion.div>
-                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                        <Button
-                          onClick={() => handleToggleActive(service.id)}
-                          variant="outline"
-                          size="sm"
-                          className={`w-full border-2 ${
-                            service.isActive 
-                              ? 'border-gray-400 text-gray-600 hover:bg-gray-500 hover:text-white' 
-                              : 'border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white'
-                          }`}
-                        >
-                          {service.isActive ? 'Disable' : 'Enable'}
-                        </Button>
-                      </motion.div>
-                    </div>
-
-                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="mt-2">
-                      <Button
-                        onClick={() => handleDeleteService(service.id)}
-                        variant="outline"
-                        size="sm"
-                        className="w-full border-2 border-red-500 text-red-600 hover:bg-red-500 hover:text-white"
-                      >
-                        <Trash2 className="w-3.5 h-3.5 mr-1" />
-                        Delete Service
-                      </Button>
-                    </motion.div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
-      </div>
+                      <div className="grid grid-cols-1 gap-2">
+                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                          <Button
+                            onClick={() => handleEdit(service)}
+                            variant="outline"
+                            size="sm"
+                            className="w-full border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white"
+                          >
+                            <Edit2 className="w-3.5 h-3.5 mr-1" />
+                            Edit
+                          </Button>
+                        </motion.div>
+                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                          <Button
+                            onClick={() => handleDeleteService(service.id)}
+                            variant="outline"
+                            size="sm"
+                            disabled={deletingId === service.id}
+                            className="w-full border-2 border-red-500 text-red-600 hover:bg-red-500 hover:text-white disabled:opacity-60"
+                          >
+                            {deletingId === service.id ? (
+                              <span className="flex items-center justify-center gap-2">
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                Removing...
+                              </span>
+                            ) : (
+                              <>
+                                <Trash2 className="w-3.5 h-3.5 mr-1" />
+                                Delete Service
+                              </>
+                            )}
+                          </Button>
+                        </motion.div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </div>
+      )}
 
       {/* Empty State */}
-      {services.length === 0 && (
+      {!loading && services.length === 0 && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

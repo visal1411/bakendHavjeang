@@ -139,6 +139,15 @@ const serviceRequestsService = {
   },
 
   /**
+   * Get completed/cancelled service history for mechanic
+   * @returns {Promise} Array of historical requests
+   */
+  getMechanicHistory: async () => {
+    const response = await apiClient.get("/servicerequests/mechanic/history");
+    return response.data;
+  },
+
+  /**
    * Accept a service request (Mechanic only)
    * @param {number} requestId - Service request ID to accept
    * @returns {Promise} Updated request with accepted status

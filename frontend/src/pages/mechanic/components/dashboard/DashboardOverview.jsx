@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Briefcase, 
@@ -8,7 +8,8 @@ import {
   CheckCircle,
   AlertCircle,
   TrendingUp,
-  RefreshCw
+  RefreshCw,
+  XCircle
 } from 'lucide-react';
 
 // Components
@@ -44,6 +45,10 @@ export const DashboardOverview = () => {
   const [selectedTab, setSelectedTab] = useState('pending');
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+
+  useEffect(() => {
+    setFilter(selectedTab);
+  }, [selectedTab, setFilter]);
 
   const handleAcceptRequest = async (requestId) => {
     const result = await acceptRequest(requestId);
@@ -90,9 +95,10 @@ export const DashboardOverview = () => {
   };
 
   const tabs = [
-    { id: 'pending', label: 'New Requests', count: counts.pending, color: 'yellow', icon: AlertCircle },
-    { id: 'accepted', label: 'Accepted', count: counts.accepted, color: 'blue', icon: CheckCircle },
+    { id: 'pending', label: 'New Requests', count: counts.pending || 0, color: 'yellow', icon: AlertCircle },
+    { id: 'accepted', label: 'Accepted', count: counts.accepted || 0, color: 'blue', icon: CheckCircle },
     { id: 'completed', label: 'Completed', count: counts.completed || 0, color: 'green', icon: CheckCircle },
+    { id: 'cancelled', label: 'Cancelled', count: counts.cancelled || 0, color: 'red', icon: XCircle }
   ];
 
   return (
@@ -177,7 +183,6 @@ export const DashboardOverview = () => {
                     key={tab.id}
                     onClick={() => {
                       setSelectedTab(tab.id);
-                      setFilter(tab.id);
                     }}
                     className={`
                       p-4 rounded-xl text-left transition-all border-2

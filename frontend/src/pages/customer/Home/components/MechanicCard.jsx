@@ -4,14 +4,22 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { phnomPenhDistricts } from '@/data/mockData';
 
 /**
  * Mechanic card component with smooth animations and hover effects
  * Enhanced with larger size and special styling for recommended/nearby mechanics
  */
 export const MechanicCard = ({ mechanic, onSelect, isSaved, onToggleSave, isRecommended = false }) => {
-  console.log(`MechanicCard ${mechanic.name}:`, { distance: mechanic.distance, trip_price: mechanic.trip_price, type: typeof mechanic.trip_price, isFinite: Number.isFinite(mechanic.trip_price), calculation: mechanic.trip_price ? (mechanic.trip_price / 1000).toFixed(1) : 'N/A' });
+  const services = Array.isArray(mechanic?.services) ? mechanic.services : [];
+  const distanceValue = Number.isFinite(Number(mechanic?.distance)) ? Number(mechanic.distance) : null;
+  const rawTripPrice = Number.isFinite(Number(mechanic?.trip_price)) ? Number(mechanic.trip_price) : null;
+  const displayTripPrice = rawTripPrice !== null ? (rawTripPrice / 1000).toFixed(1) : null;
+  const workHours = mechanic?.workHours || 'Hours not provided';
+  const responseTime = mechanic?.responseTime || '~10 min';
+  const displayLocation = mechanic?.location || 'Location not provided';
+  const rating = mechanic?.rating ?? 0;
+  const totalReviews = mechanic?.totalReviews ?? 0;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -83,10 +91,10 @@ export const MechanicCard = ({ mechanic, onSelect, isSaved, onToggleSave, isReco
                       <span className={cn(
                         "font-semibold text-gray-900",
                         isRecommended && "text-base"
-                      )}>{mechanic.rating}</span>
-                      <span className="text-gray-500 text-xs">({mechanic.totalReviews})</span>
+                      )}>{rating}</span>
+                      <span className="text-gray-500 text-xs">({totalReviews})</span>
                     </div>
-                    {mechanic.distance !== undefined && (
+                    {distanceValue !== null && (
                       <>
                         <span className="text-gray-300">•</span>
                         <div className="flex items-center gap-1 text-gray-600">
@@ -96,29 +104,29 @@ export const MechanicCard = ({ mechanic, onSelect, isSaved, onToggleSave, isReco
                           <span className={cn(
                             "font-semibold",
                             isRecommended && "text-base text-green-700"
-                          )}>{mechanic.distance?.toFixed(1) ?? "?"} km</span>
+                          )}>{distanceValue.toFixed(1)} km</span>
                         </div>
-                        {Number.isFinite(mechanic.trip_price) && mechanic.trip_price > 0 && (
+                        {displayTripPrice && (
                           <>
                             <span className="text-gray-300">•</span>
                             <div className="text-sm font-semibold text-amber-600">
-                              ${(mechanic.trip_price / 1000).toFixed(1)}k
+                              ${displayTripPrice}k
                             </div>
                           </>
                         )}
                         {/* Zone Indicator */}
-                        {mechanic.distance != null && mechanic.distance <= 5 ? (
+                        {distanceValue <= 5 ? (
                           <Badge className={cn(
                             "bg-green-100 text-green-700 border-green-300 px-2 py-0",
                             isRecommended ? "text-sm font-bold" : "text-xs"
                           )}>
                             ⚡ Nearby
                           </Badge>
-                        ) : mechanic.distance != null ? (
+                        ) : (
                           <Badge variant="outline" className="text-orange-600 border-orange-300 text-xs px-2 py-0">
-                            {mechanic.distance.toFixed(1)}km away
+                            {distanceValue.toFixed(1)}km away
                           </Badge>
-                        ) : null}
+                        )}
                       </>
                     )}
                   </div>
@@ -173,27 +181,27 @@ export const MechanicCard = ({ mechanic, onSelect, isSaved, onToggleSave, isReco
                 "flex items-center gap-2 text-gray-600 mb-2",
                 isRecommended ? "text-sm" : "text-xs"
               )}>
-                <Clock className={cn(
+                <span className={cn(
                   isRecommended ? "w-4 h-4" : "w-3.5 h-3.5"
                 )} strokeWidth={2} />
-                <span className={cn(isRecommended && "font-medium")}>{mechanic.workHours}</span>
+                <span className={cn(isRecommended && "font-medium")}>{workHours}</span>
                 {mechanic.available && (
                   <>
                     <span>•</span>
                     <span className={cn(
                       "text-green-700 font-bold",
                       isRecommended && "text-sm"
-                    )}>{mechanic.responseTime}</span>
+                    )}>{responseTime}</span>
                   </>
                 )}
-                {mechanic.district && (
+                {displayLocation && (
                   <>
                     <span>•</span>
                     <MapPin className={cn(
                       isRecommended ? "w-3.5 h-3.5" : "w-3 h-3"
                     )} />
                     <span className="font-medium">
-                      {phnomPenhDistricts.find(d => d.id === mechanic.district)?.label || mechanic.location}
+                      {displayLocation}
                     </span>
                   </>
                 )}
@@ -203,7 +211,7 @@ export const MechanicCard = ({ mechanic, onSelect, isSaved, onToggleSave, isReco
                 "flex flex-wrap gap-1.5 mb-3",
                 isRecommended && "gap-2"
               )}>
-                {mechanic.services.slice(0, 3).map((service) => (
+                {services.slice(0, 3).map((service) => (
                   <Badge key={service} variant="secondary" className={cn(
                     "capitalize",
                     isRecommended && "text-sm px-3 py-1"

@@ -8,12 +8,13 @@ import {
   Send,
   Camera,
   Image as ImageIcon,
-  Trash2
+  Trash2,
+  CheckCircle2
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { serviceTypes } from '@/data/mockData';
+import { Badge } from '@/components/ui/badge';
 import { backdropFade, modalContent } from '@/lib/animations';
 
 /**
@@ -23,6 +24,9 @@ export const ServiceRequestModal = ({
   mechanic,
   calculatedTripFee,
   selectedServices,
+  serviceOptions,
+  servicesLoading,
+  servicesError,
   serviceDescription,
   photos,
   onClose,
@@ -30,13 +34,129 @@ export const ServiceRequestModal = ({
   onDescriptionChange,
   onAddPhoto,
   onRemovePhoto,
-  onSubmit
+  onSubmit,
+  onRetryServices
 }) => {
   const handlePhotoUpload = (event) => {
     const files = Array.from(event.target.files);
     files.forEach((file) => onAddPhoto(file));
     event.target.value = ''; // Reset input
   };
+
+  const formatCurrency = (value) => `$${Number(value || 0).toFixed(2)}`;
+  const tripFeeDisplay = formatCurrency(calculatedTripFee);
+  const safeServiceOptions = Array.isArray(serviceOptions) ? serviceOptions : [];
+  const selectedSet = new Set((selectedServices || []).map((id) => String(id)));
+  const mechanicDistance = mechanic?.distance ? `${mechanic.distance} km away` : 'Distance unavailable';
+  const mechanicResponse = mechanic?.responseTime || 'Responds quickly';
+
+  const renderServiceContent = () => {
+    if (servicesLoading) {
+      return (
+        <div className="grid grid-cols-2 gap-2">
+          {Array.from({ length: 4 }).map((_, idx) => (
+            <div
+              key={`service-skeleton-${idx}`}
+              className="h-16 rounded-xl bg-gray-100 animate-pulse"
+            />
+          ))}
+        </div>
+      );
+    }
+
+    if (servicesError) {
+      return (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <p>{servicesError}</p>
+          {onRetryServices && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3 border-red-200 text-red-700 hover:bg-red-100"
+              onClick={onRetryServices}
+            >
+              Retry
+            </Button>
+          )}
+        </div>
+      );
+    }
+
+    if (!safeServiceOptions.length) {
+      return (
+        <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+          This mechanic hasn&apos;t listed specific services yet. Describe your issue below and they&apos;ll diagnose it on arrival.
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        {safeServiceOptions.map((service, index) => {
+          const hasValidId = service.id !== undefined && service.id !== null;
+          const serviceKey = String(hasValidId ? service.id : index);
+          const serviceIdString = hasValidId ? String(service.id) : null;
+          const isSelected = Boolean(serviceIdString && selectedSet.has(serviceIdString));
+          const serviceTypeLabel = service.serviceType
+            ? service.serviceType.replace(/_/g, ' ')
+            : 'Custom';
+
+          return (
+            <motion.button
+              type="button"
+              key={serviceKey}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 + index * 0.04 }}
+              whileTap={{ scale: hasValidId ? 0.98 : 1 }}
+              onClick={() => hasValidId && onServiceToggle(service.id)}
+              disabled={!hasValidId}
+              className={`w-full text-left rounded-2xl border-2 p-4 transition-all ${
+                isSelected
+                  ? 'border-primary bg-primary/5 shadow-[0_12px_25px_rgba(59,130,246,0.18)]'
+                  : 'border-gray-100 bg-white hover:border-gray-300 hover:bg-gray-50'
+              } ${hasValidId ? '' : 'opacity-60 cursor-not-allowed'}`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-2">
+                  <p className="font-semibold text-gray-900 text-base">
+                    {service.name || 'Service name unavailable'}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <Badge variant="outline" className="uppercase tracking-wide text-[10px]">
+                      {serviceTypeLabel}
+                    </Badge>
+                    {isSelected && (
+                      <span className="inline-flex items-center gap-1 text-primary text-[11px] font-semibold">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Selected
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-bold text-gray-900">
+                    {formatCurrency(service.price)}
+                  </p>
+                  <p className="text-[11px] text-gray-500">per service</p>
+                </div>
+              </div>
+              <div className="mt-4 flex items-center gap-2 text-xs text-gray-600">
+                <Wrench className="w-4 h-4 text-primary" />
+                <span>
+                  {hasValidId
+                    ? isSelected
+                      ? 'Tap to remove from this request'
+                      : 'Tap to add this service to your request'
+                    : 'Service unavailable right now'}
+                </span>
+              </div>
+            </motion.button>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <motion.div 
       className="absolute inset-0 z-50 bg-black/50 flex items-end" 
@@ -88,9 +208,9 @@ export const ServiceRequestModal = ({
                     <h3 className="font-bold text-gray-900 truncate">{mechanic.name}</h3>
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <MapPin className="w-3.5 h-3.5" />
-                      <span>{mechanic.distance} km away</span>
+                      <span>{mechanicDistance}</span>
                       <span>•</span>
-                      <span className="text-green-700 font-semibold">{mechanic.responseTime}</span>
+                      <span className="text-green-700 font-semibold">{mechanicResponse}</span>
                     </div>
                   </div>
                 </div>
@@ -115,7 +235,7 @@ export const ServiceRequestModal = ({
               initial={{ scale: 1.2, color: '#2563eb' }}
               animate={{ scale: 1, color: '#2563eb' }}
             >
-              ${calculatedTripFee}
+              {tripFeeDisplay}
             </motion.span>
           </motion.div>
         </div>
@@ -133,37 +253,10 @@ export const ServiceRequestModal = ({
               <AlertCircle className="w-4 h-4 inline mr-1" />
               What service do you need?
             </label>
-            <div className="grid grid-cols-2 gap-2">
-              {serviceTypes.map((service, index) => {
-                const IconComponent = service.icon;
-                const isSelected = selectedServices.includes(service.id);
-                return (
-                  <motion.div
-                    key={service.id}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.3 + index * 0.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <Button
-                      onClick={() => onServiceToggle(service.id)}
-                      variant={isSelected ? 'default' : 'secondary'}
-                      className={`w-full justify-start h-auto py-3 transition-all ${
-                        isSelected ? 'shadow-md' : ''
-                      }`}
-                    >
-                      <motion.div
-                        animate={isSelected ? { rotate: [0, -10, 10, 0] } : {}}
-                        transition={{ duration: 0.3 }}
-                      >
-                        <IconComponent className="w-4 h-4" />
-                      </motion.div>
-                      <span className="text-xs">{service.label}</span>
-                    </Button>
-                  </motion.div>
-                );
-              })}
-            </div>
+            {renderServiceContent()}
+            <p className="mt-3 text-xs text-gray-500">
+              Can&apos;t find your issue? Add details below and the mechanic will prepare for a custom diagnosis.
+            </p>
           </motion.div>
 
           {/* Issue Description with smooth entrance */}

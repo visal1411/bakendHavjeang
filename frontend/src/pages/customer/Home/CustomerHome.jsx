@@ -210,12 +210,16 @@ const CustomerHome = () => {
               services: serviceRequest?.selectedServices || [],
               description: serviceRequest?.serviceDescription || '',
               photos: serviceRequest?.photos || [],
+              serviceOptions: serviceRequest?.serviceOptions || [],
+              isLoadingServices: serviceRequest?.isServicesLoading || false,
+              servicesError: serviceRequest?.serviceLoadError || '',
               onClose: serviceRequest?.closeServiceRequest || (() => {}),
               onServiceToggle: serviceRequest?.toggleServiceType || (() => {}),
               onDescriptionChange: serviceRequest?.setServiceDescription || (() => {}),
               onAddPhoto: serviceRequest?.addPhoto || (() => {}),
               onRemovePhoto: serviceRequest?.removePhoto || (() => {}),
-              onSubmit: serviceRequest?.submitServiceRequest || (() => {})
+              onSubmit: serviceRequest?.submitServiceRequest || (() => {}),
+              onRetryServices: serviceRequest?.retryServiceOptions || (() => {})
             }}
             // Bottom sheet controls
             bottomSheet={{
@@ -263,12 +267,16 @@ const CustomerHome = () => {
     serviceRequest?.selectedServices,
     serviceRequest?.serviceDescription,
     serviceRequest?.photos,
+    serviceRequest?.serviceOptions,
+    serviceRequest?.isServicesLoading,
+    serviceRequest?.serviceLoadError,
     serviceRequest?.closeServiceRequest,
     serviceRequest?.toggleServiceType,
     serviceRequest?.setServiceDescription,
     serviceRequest?.addPhoto,
     serviceRequest?.removePhoto,
     serviceRequest?.submitServiceRequest,
+    serviceRequest?.retryServiceOptions,
     bottomSheet?.bottomSheetRef,
     bottomSheet?.bottomSheetState,
     bottomSheet?.handleDragStart,

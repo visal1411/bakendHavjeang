@@ -16,7 +16,8 @@ import {
   acceptProposedPrice,
   declineProposedPrice,
   proposeServicePrice,
-  getRequestTotal
+  getRequestTotal,
+  getMechanicHistory
 } from "../controller/serviceRequest.js";
 
 const router = express.Router();
@@ -66,6 +67,9 @@ mechanicRouter.use(authenticateToken, isMechanic);
 
 // View incoming requests
 mechanicRouter.get("/incoming", getIncomingRequests);
+
+// View completed/cancelled history
+mechanicRouter.get("/history", getMechanicHistory);
 
 // Accept request
 mechanicRouter.patch("/:id/accept", acceptServiceRequest);

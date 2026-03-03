@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { serviceRequestsService } from "@/services";
 
+const parseAmount = (value) => {
+  const amount = Number(value);
+  return Number.isFinite(amount) ? amount : 0;
+};
 
 /**
  * useCustomerHistory Hook
@@ -19,25 +23,49 @@ export const useCustomerHistory = () => {
     try {
       const response = await serviceRequestsService.getMyRequests();
 
-      // Transform API response to match expected format
-      const transformedHistory = response.map((req) => ({
-        id: req.id,
-        date: req.request_date,
-        mechanicName: req.mechanic?.name || "Pending Assignment",
-        mechanicPhone: req.mechanic?.phone,
-        mechanicRating: req.mechanic?.rating || 0,
-        service: req.service?.map((s) => s.name).join(", ") || "Custom Service",
-        status: req.status,
-        location: req.address,
-        tripPrice: req.trip_price,
-        servicePrice: req.total_price - req.trip_price || 0,
-        total: req.total_price || req.trip_price,
-        proposedPrice: req.proposed_price,
-        customerApproved: req.customerApproved,
-        description: req.description,
-        lat: req.request_lat,
-        lng: req.request_lng,
-      }));
+      // Transform API response to match History component expectations
+      const transformedHistory = response.map((request) => {
+        const tripFee = parseAmount(request.trip_price);
+        const proposedPrice = parseAmount(request.proposed_price);
+        const serviceItems = Array.isArray(request.service) ? request.service : [];
+        const serviceFee = serviceItems.length
+          ? serviceItems.reduce((sum, service) => sum + parseAmount(service.price), 0)
+          : proposedPrice;
+        const totalAmount = parseAmount(request.total_price) || tripFee + serviceFee;
+        const normalizedStatus = (request.status || '').toLowerCase();
+        const canRespondToPriceChange = proposedPrice > 0 && normalizedStatus === 'pending' && request.customerApproved !== true;
+        const canCancel = ['pending', 'accepted', 'in-progress'].includes(normalizedStatus);
+
+        return {
+          id: request.id,
+          serviceDate: request.request_date,
+          mechanicName: request.mechanic?.name || "Pending Assignment",
+          mechanicPhone: request.mechanic?.phone || "",
+          mechanicLocation: request.mechanic
+            ? {
+                lat: request.mechanic.mechanic_lat,
+                lng: request.mechanic.mechanic_lng,
+              }
+            : null,
+          serviceType: serviceItems.length
+            ? serviceItems.map((service) => service.name).join(", ")
+            : "Custom Service",
+          status: request.status || 'pending',
+          location: request.address,
+          tripFee,
+          serviceFee,
+          totalAmount,
+          price: totalAmount,
+          rating: null,
+          notes: request.description,
+          proposedPrice,
+          customerApproved: request.customerApproved,
+          lat: request.request_lat,
+          lng: request.request_lng,
+          canRespondToPriceChange,
+          canCancel,
+        };
+      });
 
       setHistory(transformedHistory);
     } catch (err) {
@@ -61,7 +89,7 @@ export const useCustomerHistory = () => {
       // Update local state
       setHistory((prevHistory) =>
         prevHistory.map((req) =>
-          req.id === requestId ? { ...req, status: "cancelled" } : req,
+          req.id === requestId ? { ...req, status: "cancelled", canCancel: false } : req,
         ),
       );
 

@@ -1,10 +1,14 @@
 /**
- * Calculate trip fee based on distance and base rate
- * Uses the trip_price already calculated by the backend
+ * Calculate trip fee based on backend-provided amount with $2 minimum
  */
+const MIN_TRIP_FEE = 2;
+
 export const calculateTripFee = (mechanic) => {
-  // Use the backend-calculated trip_price directly (already in base units)
-  return mechanic.trip_price || 0;
+  const fee = Number(mechanic?.trip_price ?? 0);
+  if (Number.isNaN(fee)) {
+    return MIN_TRIP_FEE;
+  }
+  return Math.max(fee, MIN_TRIP_FEE);
 };
 
 /**

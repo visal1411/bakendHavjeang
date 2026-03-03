@@ -1,6 +1,7 @@
 import { getDistanceKmORS } from "./distance/orsDistance.js";
 
-const PRICE_PER_KM = Number(process.env.PRICE_PER_KM) || 1600;
+const PRICE_PER_KM_USD = Number(process.env.PRICE_PER_KM_USD ?? process.env.PRICE_PER_KM) || 0.4;
+const MIN_TRIP_FEE_USD = Number(process.env.MIN_TRIP_FEE_USD) || 2;
 
 /**
  * Calculate trip price from customer to mechanic.
@@ -9,7 +10,8 @@ export async function calculateTripPrice(customerLocation, mechanicLocation) {
   if (!mechanicLocation.lat || !mechanicLocation.lng) return { tripDistanceKm: 0, tripPrice: 0 };
 
   const tripDistanceKm = await getDistanceKmORS(customerLocation, mechanicLocation);
-  const tripPrice = Math.round(tripDistanceKm * PRICE_PER_KM);
+  const rawPrice = Number((tripDistanceKm * PRICE_PER_KM_USD).toFixed(2));
+  const tripPrice = Math.max(MIN_TRIP_FEE_USD, rawPrice);
 
   return { tripDistanceKm: Number(tripDistanceKm.toFixed(2)), tripPrice };
 }

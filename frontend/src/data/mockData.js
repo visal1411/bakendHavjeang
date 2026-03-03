@@ -15,11 +15,6 @@ import {
 // Service categories for filtering
 export const categories = [
   { id: "all", label: "All Services", icon: Wrench, color: "gray" },
-  { id: "emergency", label: "Emergency", icon: AlertOctagon, color: "red" },
-  { id: "tire", label: "Tire", icon: Disc, color: "blue" },
-  { id: "battery", label: "Battery", icon: Battery, color: "yellow" },
-  { id: "engine", label: "Engine", icon: Zap, color: "orange" },
-  { id: "brake", label: "Brake", icon: TrendingUp, color: "purple" },
 ];
 
 // Districts by province for location selection

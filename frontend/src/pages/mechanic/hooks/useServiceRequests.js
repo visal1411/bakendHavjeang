@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { serviceRequests as mockRequests } from "@/data/mockData";
 import { serviceRequestsService } from "@/services";
 
 /**
@@ -10,7 +9,7 @@ import { serviceRequestsService } from "@/services";
 export const useServiceRequests = () => {
   const [requests, setRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState("all"); // all, pending, accepted, in-progress, completed
+  const [filter, setFilter] = useState("pending"); // pending, accepted, in-progress, completed, cancelled
 
   useEffect(() => {
     // Fetch service requests from API
@@ -42,8 +41,7 @@ export const useServiceRequests = () => {
         setRequests(transformedRequests);
       } catch (error) {
         console.error("Failed to fetch service requests:", error);
-        // Fallback to mock data on error
-        setRequests(mockRequests);
+        setRequests([]);
       } finally {
         setIsLoading(false);
       }
@@ -55,6 +53,9 @@ export const useServiceRequests = () => {
   // Filter requests based on status
   const filteredRequests = requests.filter((request) => {
     if (filter === "all") return true;
+    if (filter === "in-progress") {
+      return request.status === "in-progress" || request.status === "in_progress";
+    }
     return request.status === filter;
   });
 
@@ -63,8 +64,11 @@ export const useServiceRequests = () => {
     all: requests.length,
     pending: requests.filter((r) => r.status === "pending").length,
     accepted: requests.filter((r) => r.status === "accepted").length,
-    inProgress: requests.filter((r) => r.status === "in-progress").length,
+    inProgress: requests.filter(
+      (r) => r.status === "in-progress" || r.status === "in_progress"
+    ).length,
     completed: requests.filter((r) => r.status === "completed").length,
+    cancelled: requests.filter((r) => r.status === "cancelled").length
   };
 
   const acceptRequest = async (requestId) => {

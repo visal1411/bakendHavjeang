@@ -228,7 +228,35 @@ export const declineProposedPrice = async (req, res) => {
   }
 };
 
-// ============================p
+// // ============================p
+// // CUSTOMER: Get mechanic info
+// // ============================
+// export const getCustomerById = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const customer = await prisma.user.findUnique({
+//       where: { id: Number(id) },
+//       select: {
+//         id: true,
+//         name: true,
+//         phone: true,
+//         usertype: true,
+//       }
+//     });
+
+//     if (!customer || customer.usertype !== "customer") {
+//       return res.status(404).json({ message: "Customer not found" });
+//     }
+
+//     res.status(200).json({ message: "Customer fetched successfully", customer });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
+
+
+// ============================
 // CUSTOMER: Get mechanic info
 // ============================
 export const getMechanicById = async (req, res) => {
@@ -257,34 +285,6 @@ export const getMechanicById = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-
-// // ============================p
-// // CUSTOMER: Get mechanic info
-// // ============================
-// export const getCustomerById = async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const customer = await prisma.user.findUnique({
-//       where: { id: Number(id) },
-//       select: {
-//         id: true,
-//         name: true,
-//         phone: true,
-//         usertype: true,
-//       }
-//     });
-
-//     if (!customer || customer.usertype !== "customer") {
-//       return res.status(404).json({ message: "Customer not found" });
-//     }
-
-//     res.status(200).json({ message: "Customer fetched successfully", customer });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ message: "Server error" });
-//   }
-// };
-
 
 // ============================
 // CUSTOMER: Get all services by a mechanic
@@ -336,6 +336,41 @@ export const getRequestTotal = async (req, res) => {
 };
 
 // ============================
+// MECHANIC: Service history (completed/cancelled)
+// ============================
+export const getMechanicHistory = async (req, res) => {
+  try {
+    const mechanicId = req.user.id;
+
+    const history = await prisma.serviceRequest.findMany({
+      where: {
+        OR: [
+          { service: { some: { mechanicId } } },
+          { service: { none: {} }, mechanicId }
+        ],
+        status: { in: ["completed", "cancelled"] }
+      },
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            phone: true
+          }
+        },
+        service: true
+      },
+      orderBy: { request_date: "desc" }
+    });
+
+    res.json(history);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ============================
 // CUSTOMER: Get my requests
 // ============================
 export const getMyRequests = async (req, res) => {
@@ -343,7 +378,18 @@ export const getMyRequests = async (req, res) => {
     const customerId = req.user.id;
     const requests = await prisma.serviceRequest.findMany({
       where: { customerId },
-      include: { service: true },
+      include: {
+        service: true,
+        mechanic: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            mechanic_lat: true,
+            mechanic_lng: true
+          }
+        }
+      },
       orderBy: { request_date: "desc" }
     });
     res.json(requests);

@@ -555,6 +555,19 @@ paths:
         "401":
           description: Unauthorized - missing or invalid token
 
+  /servicerequests/mechanic/history:
+    get:
+      summary: Mechanic views completed or cancelled requests
+      tags:
+        - Mechanic
+      security:
+        - MechanicAuth: []
+      responses:
+        "200":
+          description: List of historical requests
+        "401":
+          description: Unauthorized - missing or invalid token
+
   /servicerequests/mechanic/{id}/accept:
     patch:
       summary: Mechanic accepts a request

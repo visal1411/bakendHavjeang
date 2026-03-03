@@ -84,12 +84,16 @@ export const ExploreView = ({
     services, 
     description,
     photos,
+    serviceOptions,
+    isLoadingServices,
+    servicesError,
     onClose, 
     onServiceToggle, 
     onDescriptionChange,
     onAddPhoto,
     onRemovePhoto,
-    onSubmit 
+    onSubmit,
+    onRetryServices
   },
   
   // Bottom Sheet
@@ -147,6 +151,7 @@ export const ExploreView = ({
         locationPermission={permission}
         isLoadingLocation={isLoading}
         retryLocation={retry}
+        mechanicOptions={safeFiltered}
       />
 
       {/* Recenter Map Button - Only show when user location is available */}
@@ -159,6 +164,9 @@ export const ExploreView = ({
             mechanic={mechanic}
             calculatedTripFee={tripFee || 0}
             selectedServices={services || []}
+            serviceOptions={serviceOptions || []}
+            servicesLoading={isLoadingServices || false}
+            servicesError={servicesError || ''}
             serviceDescription={description || ''}
             photos={photos || []}
             onClose={onClose}
@@ -167,6 +175,7 @@ export const ExploreView = ({
             onAddPhoto={onAddPhoto}
             onRemovePhoto={onRemovePhoto}
             onSubmit={onSubmit}
+            onRetryServices={onRetryServices}
           />
         )}
       </AnimatePresence>

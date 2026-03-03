@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { calculateTripFee } from "../utils/helpers";
 import { serviceRequestsService } from "@/services";
 
@@ -32,18 +32,63 @@ export const useServiceRequest = (userLocation) => {
   const [selectedServices, setSelectedServices] = useState([]);
   const [calculatedTripFee, setCalculatedTripFee] = useState(0);
   const [photos, setPhotos] = useState([]);
+  const [serviceOptions, setServiceOptions] = useState([]);
+  const [isServicesLoading, setIsServicesLoading] = useState(false);
+  const [serviceLoadError, setServiceLoadError] = useState("");
+
+  const loadMechanicServices = useCallback(async (mechanicId) => {
+    if (!mechanicId) {
+      setServiceOptions([]);
+      return;
+    }
+
+    try {
+      setIsServicesLoading(true);
+      setServiceLoadError("");
+      const response = await serviceRequestsService.getServicesByMechanic(mechanicId);
+      const normalized = Array.isArray(response)
+        ? response.map((service) => ({
+            id: service.id,
+            name: service.name || service.serviceType || "Custom service",
+            price: Number(service.price ?? 0),
+            serviceType: service.serviceType || "other",
+          }))
+        : [];
+      setServiceOptions(normalized);
+    } catch (error) {
+      console.error("Failed to load mechanic services:", error);
+      setServiceLoadError(
+        error?.response?.data?.message || "Failed to load mechanic services."
+      );
+      setServiceOptions([]);
+    } finally {
+      setIsServicesLoading(false);
+    }
+  }, []);
 
   const openServiceRequest = (mechanic) => {
     setSelectedMechanic(mechanic);
     setShowServiceRequest(true);
     setCalculatedTripFee(calculateTripFee(mechanic));
+    setSelectedServices([]);
+    setServiceDescription("");
+    setPhotos([]);
+    setServiceOptions([]);
+    setServiceLoadError("");
+
+    if (mechanic?.id) {
+      loadMechanicServices(mechanic.id);
+    }
   };
 
   const closeServiceRequest = () => {
     setShowServiceRequest(false);
+    setSelectedMechanic(null);
     setSelectedServices([]);
     setServiceDescription("");
     setPhotos([]);
+    setServiceOptions([]);
+    setServiceLoadError("");
   };
 
   const addPhoto = (file) => {
@@ -79,6 +124,8 @@ export const useServiceRequest = (userLocation) => {
   };
 
   const toggleServiceType = (serviceId) => {
+    if (serviceId === undefined || serviceId === null) return;
+
     setSelectedServices((prev) =>
       prev.includes(serviceId)
         ? prev.filter((id) => id !== serviceId)
@@ -94,13 +141,17 @@ export const useServiceRequest = (userLocation) => {
 
     try {
       // Prepare request data
+      const numericServiceIds = selectedServices
+        .map((id) => Number(id))
+        .filter((id) => Number.isFinite(id));
+
       const requestData = {
         address: selectedMechanic.location || "Current Location",
         request_lat: userLocation[0],
         request_lng: userLocation[1],
         trip_price: calculatedTripFee,
         description: serviceDescription || null,
-        serviceIds: selectedServices.length > 0 ? selectedServices : undefined,
+        serviceIds: numericServiceIds.length > 0 ? numericServiceIds : undefined,
       };
 
       // Submit to backend
@@ -133,6 +184,9 @@ export const useServiceRequest = (userLocation) => {
     selectedServices,
     calculatedTripFee,
     photos,
+    serviceOptions,
+    isServicesLoading,
+    serviceLoadError,
     openServiceRequest,
     closeServiceRequest,
     setServiceDescription,
@@ -140,5 +194,10 @@ export const useServiceRequest = (userLocation) => {
     addPhoto,
     removePhoto,
     submitServiceRequest,
+    retryServiceOptions: () => {
+      if (selectedMechanic?.id) {
+        loadMechanicServices(selectedMechanic.id);
+      }
+    },
   };
 };
