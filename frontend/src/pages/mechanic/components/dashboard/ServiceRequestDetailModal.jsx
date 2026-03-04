@@ -28,32 +28,39 @@ const MapCenterUpdater = ({ center, zoom }) => {
  */
 export const ServiceRequestDetailModal = ({ request, onClose, onUpdateStatus }) => {
   const { position: mechanicPosition } = useGeolocation();
+  const customerLat = Number(request.location?.lat ?? request.request_lat);
+  const customerLng = Number(request.location?.lng ?? request.request_lng);
+  const hasCoordinates = Number.isFinite(customerLat) && Number.isFinite(customerLng);
+  const distance = Number(request.distance);
+  const distanceLabel = Number.isFinite(distance) ? `${distance} km away` : "Distance unavailable";
+
   const [mapCenter, setMapCenter] = useState([
-    request.location.lat,
-    request.location.lng,
+    hasCoordinates ? customerLat : 13.7563,
+    hasCoordinates ? customerLng : 100.5018,
   ]);
   const [mapZoom, setMapZoom] = useState(14);
 
   const formatTime = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
       minute: '2-digit',
-      hour12: true 
+      hour12: true
     });
   };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
       day: 'numeric',
       year: 'numeric'
     });
   };
 
   const handleGetDirections = () => {
-    const destination = `${request.location.lat},${request.location.lng}`;
+    if (!hasCoordinates) return;
+    const destination = `${customerLat},${customerLng}`;
     // Open Google Maps with directions
     window.open(
       `https://www.google.com/maps/dir/?api=1&destination=${destination}`,
@@ -62,7 +69,8 @@ export const ServiceRequestDetailModal = ({ request, onClose, onUpdateStatus }) 
   };
 
   const handleRecenterCustomer = () => {
-    setMapCenter([request.location.lat, request.location.lng]);
+    if (!hasCoordinates) return;
+    setMapCenter([customerLat, customerLng]);
     setMapZoom(16);
   };
 
@@ -117,24 +125,26 @@ export const ServiceRequestDetailModal = ({ request, onClose, onUpdateStatus }) 
                   >
                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                     <MapCenterUpdater center={mapCenter} zoom={mapZoom} />
-                    
+
                     {/* Customer Location */}
-                    <Marker 
-                      position={[request.location.lat, request.location.lng]} 
-                      icon={customerLocationIcon}
-                    >
-                      <Popup>
-                        <div className="text-center">
-                          <p className="font-bold">{request.customerName}</p>
-                          <p className="text-xs text-gray-600">{request.location.address}</p>
-                        </div>
-                      </Popup>
-                    </Marker>
+                    {hasCoordinates && (
+                      <Marker
+                        position={[customerLat, customerLng]}
+                        icon={customerLocationIcon}
+                      >
+                        <Popup>
+                          <div className="text-center">
+                            <p className="font-bold">{request.customerName}</p>
+                            <p className="text-xs text-gray-600">{request.location?.address || 'Unknown'}</p>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    )}
 
                     {/* Mechanic Location */}
                     {mechanicPosition && (
-                      <Marker 
-                        position={[mechanicPosition.lat, mechanicPosition.lng]} 
+                      <Marker
+                        position={[mechanicPosition.lat, mechanicPosition.lng]}
                         icon={mechanicLocationIcon}
                       >
                         <Popup>
@@ -203,27 +213,27 @@ export const ServiceRequestDetailModal = ({ request, onClose, onUpdateStatus }) 
                   </div>
                   <div>
                     <p className="text-xs text-gray-600">Distance</p>
-                    <p className="text-sm font-medium text-gray-900">{request.distance} km away</p>
+                    <p className="text-sm font-medium text-gray-900">{distanceLabel}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-600">Coordinates</p>
-                    <p className="text-xs text-gray-500 font-mono">
-                      {request.location.lat.toFixed(6)}, {request.location.lng.toFixed(6)}
-                    </p>
+                    {hasCoordinates ? (
+                      <p className="text-xs text-gray-500 font-mono">
+                        {customerLat.toFixed(6)}, {customerLng.toFixed(6)}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-gray-500">Coordinates unavailable</p>
+                    )}
                   </div>
                 </div>
               </Card>
 
               <Card className="p-4">
-                <h3 className="font-bold text-gray-900 mb-3">Vehicle Information</h3>
+                <h3 className="font-bold text-gray-900 mb-3">Service Information</h3>
                 <div className="space-y-2">
                   <div>
-                    <p className="text-xs text-gray-600">Vehicle Type</p>
-                    <p className="text-sm font-medium text-gray-900">{request.vehicleType}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-600">Make/Model</p>
-                    <p className="text-sm font-medium text-gray-900">{request.vehicleMake}</p>
+                    <p className="text-xs text-gray-600">Service Type</p>
+                    <p className="text-sm font-medium text-gray-900">{request.serviceCategory}</p>
                   </div>
                 </div>
               </Card>
@@ -271,7 +281,7 @@ export const ServiceRequestDetailModal = ({ request, onClose, onUpdateStatus }) 
                 <h3 className="font-bold text-gray-900 mb-2">Estimated Trip Fee</h3>
                 <p className="text-3xl font-bold text-primary">${request.estimatedTripFee.toFixed(2)}</p>
                 <p className="text-xs text-gray-600 mt-1">
-                  Based on {request.distance} km distance
+                  Based on {Number.isFinite(distance) ? `${distance} km` : "backend distance"}
                 </p>
               </Card>
             </div>

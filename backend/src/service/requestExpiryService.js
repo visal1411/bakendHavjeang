@@ -43,6 +43,11 @@ export const startRequestExpiryScheduler = () => {
               id: true,
               name: true
             }
+          },
+          service: {
+            select: {
+              mechanicId: true
+            }
           }
         }
       });
@@ -51,15 +56,20 @@ export const startRequestExpiryScheduler = () => {
         return;
       }
 
-      const ids = expiredRequests.map((r) => r.id);
+      // Update each request individually to set the correct mechanicId
+      for (const request of expiredRequests) {
+        const mechanicId = request.mechanicId || request.service[0]?.mechanicId;
+        
+        await prisma.serviceRequest.update({
+          where: { id: request.id },
+          data: { 
+            status: "cancelled",
+            mechanicId: mechanicId || undefined
+          }
+        });
+      }
 
-      // Mark them as cancelled in DB
-      await prisma.serviceRequest.updateMany({
-        where: { id: { in: ids } },
-        data: { status: "cancelled" }
-      });
-
-      // Notify affected users per request
+      // Notify affected users
       for (const request of expiredRequests) {
         const { id, customer, mechanic } = request;
 

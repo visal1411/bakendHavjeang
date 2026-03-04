@@ -1,6 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Phone, MapPin, Clock, AlertCircle, Check, X, Zap } from 'lucide-react';
+import { Phone, MapPin, Clock, Check, X, Zap } from 'lucide-react';
 
 /**
  * ServiceRequestCard Component
@@ -10,31 +10,18 @@ import { Phone, MapPin, Clock, AlertCircle, Check, X, Zap } from 'lucide-react';
  * - Clear visual hierarchy (most important info first)
  * - Simple language (no jargon)
  * - Obvious actions (big buttons with clear labels)
- * - Color coding for priority
  */
 export const ServiceRequestCard = ({ request, onAccept, onDecline, onViewDetails }) => {
-  const priorityConfig = {
-    normal: { 
-      bg: 'bg-gray-50', 
-      border: 'border-gray-300', 
-      text: 'text-gray-700',
-      label: 'Normal'
-    },
-    urgent: { 
-      bg: 'bg-orange-50', 
-      border: 'border-orange-400', 
-      text: 'text-orange-700',
-      label: 'Urgent'
-    },
-    emergency: { 
-      bg: 'bg-red-50', 
-      border: 'border-red-500', 
-      text: 'text-red-700',
-      label: 'EMERGENCY'
-    },
-  };
+  if (!request) {
+    return null;
+  }
 
-  const config = priorityConfig[request.priority];
+  const estimatedTripFee = Number(request.estimatedTripFee ?? request.tripPrice ?? 0);
+  const serviceFee = Number(request.serviceFee ?? 0);
+  const totalPrice = Number(request.totalPrice ?? estimatedTripFee + serviceFee);
+  const isKnownService = Boolean(request.isKnownService);
+  const backendDistance = Number(request.distance);
+  const hasBackendDistance = Number.isFinite(backendDistance);
 
   const formatTime = (dateString) => {
     const date = new Date(dateString);
@@ -42,32 +29,22 @@ export const ServiceRequestCard = ({ request, onAccept, onDecline, onViewDetails
   };
 
   return (
-    <Card className={`shadow-sm hover:shadow-lg transition-all border-2 ${config.border} ${config.bg}`}>
+    <Card className="shadow-sm hover:shadow-lg transition-all border-2 border-gray-300 bg-gray-50">
       <CardContent className="p-5">
-        {/* Priority Badge - Top and Obvious */}
-        {request.priority !== 'normal' && (
-          <div className={`mb-4 inline-flex items-center gap-2 px-4 py-2 ${config.bg} border-2 ${config.border} rounded-full`}>
-            <AlertCircle className={`w-5 h-5 ${config.text} ${request.priority === 'emergency' ? 'animate-pulse' : ''}`} />
-            <span className={`font-bold ${config.text} text-sm`}>
-              {config.label}
-            </span>
-          </div>
-        )}
-
         {/* Customer Name - Big and Clear */}
         <h3 className="text-xl font-bold text-gray-900 mb-2">{request.customerName}</h3>
-        
+
         {/* Service Type - Clear Label */}
         <div className="mb-4 p-3 bg-white rounded-lg border-2 border-gray-200">
           <p className="text-xs text-gray-600 mb-1">Needs Help With:</p>
           <p className="text-lg font-bold text-primary">{request.serviceType}</p>
         </div>
 
-        {/* Vehicle Info - Simple */}
+        {/* Service Category - Simple */}
         <div className="mb-4 p-3 bg-white rounded-lg">
-          <p className="text-xs text-gray-600 mb-1">Vehicle</p>
+          <p className="text-xs text-gray-600 mb-1">Service Type</p>
           <p className="font-medium text-gray-900">
-            {request.vehicleType} • {request.vehicleMake}
+            {request.serviceCategory}
           </p>
         </div>
 
@@ -104,8 +81,12 @@ export const ServiceRequestCard = ({ request, onAccept, onDecline, onViewDetails
             )}
           </div>
           <div className="flex items-center gap-1 text-sm text-gray-700">
-            <span className="font-semibold">{request.distance} km</span>
-            <span className="text-gray-500">from your location</span>
+            <span className="font-semibold">
+              {hasBackendDistance ? `${backendDistance.toFixed(2)} km` : 'Distance unavailable'}
+            </span>
+            {hasBackendDistance && (
+              <span className="text-gray-500">from your location</span>
+            )}
           </div>
         </div>
 
@@ -118,11 +99,22 @@ export const ServiceRequestCard = ({ request, onAccept, onDecline, onViewDetails
           </div>
         </div>
 
-        {/* Trip Fee - Big and Clear */}
+        {/* Earnings - Known/Unknown service mode */}
         <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border-2 border-blue-300">
-          <p className="text-xs text-gray-600 mb-1">You'll Earn (Trip Fee)</p>
-          <p className="text-3xl font-bold text-primary">${request.estimatedTripFee.toFixed(2)}</p>
-          <p className="text-xs text-gray-600 mt-1">+ service fee (you'll decide on-site)</p>
+          <p className="text-xs text-gray-600 mb-1">
+            {isKnownService ? "You'll Earn (Total)" : "You'll Earn (Trip Fee)"}
+          </p>
+          <p className="text-3xl font-bold text-primary">
+            ${isKnownService ? totalPrice.toFixed(2) : estimatedTripFee.toFixed(2)}
+          </p>
+          {isKnownService ? (
+            <div className="text-xs text-gray-600 mt-1">
+              <p>Trip fee: ${estimatedTripFee.toFixed(2)}</p>
+              <p>Service fee: ${serviceFee.toFixed(2)}</p>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-600 mt-1">+ service fee (you'll decide on-site)</p>
+          )}
         </div>
 
         {/* Action Buttons - Clear and Big */}

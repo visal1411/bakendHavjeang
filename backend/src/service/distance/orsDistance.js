@@ -2,6 +2,12 @@ import axios from "axios";
 
 export async function getDistanceKmORS(origin, destination) {
   const apiKey = process.env.ORS_API_KEY;
+
+  if (!apiKey) {
+    console.error("ORS_API_KEY environment variable is not set");
+    throw new Error("ORS API key not configured");
+  }
+
   const url = "https://api.openrouteservice.org/v2/directions/driving-car";
 
   try {
@@ -33,7 +39,11 @@ export async function getDistanceKmORS(origin, destination) {
     return route.summary.distance / 1000; // meters → km
 
   } catch (error) {
-    console.error("ORS distance error:", error.response?.data || error.message);
-    throw new Error("Cannot calculate distance via ORS");
+    console.error("ORS distance error:", {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data
+    });
+    throw new Error(`Cannot calculate distance via ORS: ${error.message}`);
   }
 }

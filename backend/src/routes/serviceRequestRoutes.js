@@ -7,6 +7,7 @@ import {
   getMyRequests,
   cancelServiceRequest,
   getIncomingRequests,
+  getActiveRequests,
   completeServiceRequest,
   getNearbyMechanics,
   acceptServiceRequest,
@@ -65,8 +66,11 @@ const mechanicRouter = express.Router();
 
 mechanicRouter.use(authenticateToken, isMechanic);
 
-// View incoming requests
+// View incoming requests (pending only)
 mechanicRouter.get("/incoming", getIncomingRequests);
+
+// View all active requests (pending, accepted, in-progress)
+mechanicRouter.get("/active", getActiveRequests);
 
 // View completed/cancelled history
 mechanicRouter.get("/history", getMechanicHistory);

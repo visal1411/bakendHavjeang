@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Briefcase, 
-  DollarSign, 
-  Star, 
+import {
+  Briefcase,
+  DollarSign,
+  Star,
   Clock,
   CheckCircle,
   AlertCircle,
@@ -29,16 +29,16 @@ import { useMechanicStats, useServiceRequests, useAvailability } from '../../hoo
  */
 export const DashboardOverview = () => {
   const { stats, isLoading: statsLoading, refreshStats } = useMechanicStats();
-  const { 
-    requests, 
+  const {
+    requests,
     counts,
     filter,
     setFilter,
-    acceptRequest, 
+    acceptRequest,
     declineRequest,
     updateRequestStatus,
     refreshRequests,
-    isLoading: requestsLoading 
+    isLoading: requestsLoading
   } = useServiceRequests();
   const { isAvailable, toggleAvailability } = useAvailability();
 
@@ -55,6 +55,8 @@ export const DashboardOverview = () => {
     if (result.success) {
       setShowSuccessMessage(true);
       setTimeout(() => setShowSuccessMessage(false), 3000);
+      // Switch to the accepted tab to show the accepted request
+      setSelectedTab('accepted');
     }
   };
 
@@ -106,7 +108,7 @@ export const DashboardOverview = () => {
       {/* Success Message Banner */}
       <AnimatePresence>
         {showSuccessMessage && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
@@ -162,8 +164,8 @@ export const DashboardOverview = () => {
                   className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
                   disabled={statsLoading || requestsLoading}
                 >
-                  <RefreshCw 
-                    className={`w-4 h-4 text-gray-600 ${(statsLoading || requestsLoading) ? 'animate-spin' : ''}`} 
+                  <RefreshCw
+                    className={`w-4 h-4 text-gray-600 ${(statsLoading || requestsLoading) ? 'animate-spin' : ''}`}
                   />
                 </button>
                 <AlertCircle className="w-4 h-4 text-orange-500" />
@@ -195,9 +197,8 @@ export const DashboardOverview = () => {
                     <div className="flex items-center justify-between mb-2">
                       <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-gray-500'}`} />
                       {tab.count > 0 && (
-                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                          isActive ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'
-                        }`}>
+                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${isActive ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'
+                          }`}>
                           {tab.count}
                         </span>
                       )}
@@ -222,8 +223,8 @@ export const DashboardOverview = () => {
                   <CheckCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                   <p className="text-gray-600 font-medium">No {selectedTab} requests</p>
                   <p className="text-sm text-gray-500 mt-1">
-                    {selectedTab === 'pending' 
-                      ? 'New requests will appear here' 
+                    {selectedTab === 'pending'
+                      ? 'New requests will appear here'
                       : `You have no ${selectedTab} service requests`
                     }
                   </p>

@@ -67,23 +67,30 @@ export const useMechanics = (
 
         // Transform API response to match expected format
         const mechanicsWithDistance = response.map((mechanic) => {
+          const mechanicLat = Number(mechanic.mechanic_lat);
+          const mechanicLng = Number(mechanic.mechanic_lng);
+          const hasMechanicCoordinates = Number.isFinite(mechanicLat) && Number.isFinite(mechanicLng);
+
           const tripPrice = mechanic.trip_price ?? null;
           const numericTripPrice = tripPrice !== null ? Number(tripPrice) : null;
+          const fallbackLocation = hasMechanicCoordinates
+            ? `${mechanicLat.toFixed(6)}, ${mechanicLng.toFixed(6)}`
+            : "Unknown";
 
           console.log(`📍 Transforming ${mechanic.name}: trip_price=${mechanic.trip_price} (raw) → Number(${tripPrice}) → ${numericTripPrice}`);
 
           return {
             id: mechanic.id,
             name: mechanic.name,
-            lat: mechanic.mechanic_lat,
-            lng: mechanic.mechanic_lng,
+            lat: hasMechanicCoordinates ? mechanicLat : null,
+            lng: hasMechanicCoordinates ? mechanicLng : null,
             distance: Number(mechanic.distance),
             trip_price: numericTripPrice,
             rating: 4.5,
             totalReviews: 0,
             available: true,
             services: mechanic.services || [],
-            location: mechanic.location || "Unknown",
+            location: mechanic.location || fallbackLocation,
             phone: mechanic.phone,
           };
         });

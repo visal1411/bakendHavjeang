@@ -5,6 +5,57 @@ import { notifyMechanic, notifyCustomer, isUserOnline } from "../service/socketS
 import { sendPushToUser } from "../service/pushService.js";
 import { getDistanceKmORS } from "../service/distance/orsDistance.js";
 
+const getMechanicLocation = async (mechanicId) => {
+  const mechanic = await prisma.user.findUnique({
+    where: { id: mechanicId },
+    select: {
+      mechanic_lat: true,
+      mechanic_lng: true
+    }
+  });
+
+  const lat = Number(mechanic?.mechanic_lat);
+  const lng = Number(mechanic?.mechanic_lng);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return null;
+  }
+
+  return { lat, lng };
+};
+
+const enrichRequestsWithDistance = async (requests, mechanicId) => {
+  const mechanicLocation = await getMechanicLocation(mechanicId);
+
+  if (!mechanicLocation) {
+    return requests.map((request) => ({ ...request, distance: null }));
+  }
+
+  return Promise.all(
+    requests.map(async (request) => {
+      const requestLat = Number(request.request_lat);
+      const requestLng = Number(request.request_lng);
+
+      if (!Number.isFinite(requestLat) || !Number.isFinite(requestLng)) {
+        return { ...request, distance: null };
+      }
+
+      const customerLocation = { lat: requestLat, lng: requestLng };
+
+      try {
+        const distanceKm = await getDistanceKmORS(customerLocation, mechanicLocation);
+        return {
+          ...request,
+          distance: Number(distanceKm.toFixed(2))
+        };
+      } catch (error) {
+        console.error(`Distance calculation failed for request ${request.id}:`, error.message);
+        return { ...request, distance: null };
+      }
+    })
+  );
+};
+
 // ============================
 // CUSTOMER: Create service request
 // ============================
@@ -48,14 +99,27 @@ export const createServiceRequest = async (req, res) => {
       return res.status(400).json({ message: "Mechanic is required" });
 
     // PRICE CALCULATION
-    const { tripDistanceKm, tripPrice } = await calculateTripPrice(customerLocation, {
-      lat: mechanic.mechanic_lat,
-      lng: mechanic.mechanic_lng
-    });
+    let tripDistanceKm = 0;
+    let tripPrice = 0;
+
+    try {
+      const priceResult = await calculateTripPrice(customerLocation, {
+        lat: mechanic.mechanic_lat,
+        lng: mechanic.mechanic_lng
+      });
+      tripDistanceKm = priceResult.tripDistanceKm;
+      tripPrice = priceResult.tripPrice;
+    } catch (error) {
+      console.error("Price calculation failed:", error.message);
+      return res.status(500).json({
+        message: "Could not calculate trip price. Please try again.",
+        error: error.message
+      });
+    }
 
     let totalPrice = services.length
       ? calculateTotalPrice(tripPrice, services)
-      : 0;
+      : tripPrice; // Even for unknown services, include trip price
 
     console.log("DEBUG PRICES:", {
       mechanicLat: mechanic.mechanic_lat,
@@ -344,11 +408,17 @@ export const getMechanicHistory = async (req, res) => {
 
     const history = await prisma.serviceRequest.findMany({
       where: {
-        OR: [
-          { service: { some: { mechanicId } } },
-          { service: { none: {} }, mechanicId }
-        ],
-        status: { in: ["completed", "cancelled"] }
+        AND: [
+          { status: { in: ["completed", "cancelled"] } },
+          {
+            OR: [
+              // Known services: requests with services from this mechanic
+              { service: { some: { mechanicId } } },
+              // Unknown/accepted services: mechanicId is set to this mechanic
+              { mechanicId }
+            ]
+          }
+        ]
       },
       include: {
         customer: {
@@ -358,14 +428,21 @@ export const getMechanicHistory = async (req, res) => {
             phone: true
           }
         },
-        service: true
+        service: true,
+        mechanic: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
       },
       orderBy: { request_date: "desc" }
     });
 
+    console.log(`Mechanic ${mechanicId} history: found ${history.length} requests`);
     res.json(history);
   } catch (err) {
-    console.error(err);
+    console.error("Error fetching mechanic history:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -410,7 +487,9 @@ export const cancelServiceRequest = async (req, res) => {
     const request = await prisma.serviceRequest.findUnique({ where: { id: requestId } });
     if (!request) return res.status(404).json({ message: "Service request not found" });
     if (request.customerId !== customerId) return res.status(403).json({ message: "Not allowed" });
-    if (request.status !== "pending") return res.status(400).json({ message: "Only pending requests can be cancelled" });
+    if (!["pending", "accepted", "proposed"].includes(request.status)) {
+      return res.status(400).json({ message: "Cannot cancel completed or already cancelled requests" });
+    }
 
     const updatedRequest = await prisma.serviceRequest.update({
       where: { id: requestId },
@@ -564,7 +643,47 @@ export const getIncomingRequests = async (req, res) => {
       include: { customer: true, service: true },
       orderBy: { request_date: "asc" }
     });
-    res.json(requests);
+    const requestsWithDistance = await enrichRequestsWithDistance(requests, mechanicId);
+    res.json(requestsWithDistance);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ============================
+// MECHANIC: View all active requests (pending, proposed, accepted)
+// ============================
+export const getActiveRequests = async (req, res) => {
+  try {
+    const mechanicId = req.user.id;
+    const requests = await prisma.serviceRequest.findMany({
+      where: {
+        OR: [
+          // Known services: requests with services from this mechanic
+          { service: { some: { mechanicId } } },
+          // Unknown services (not accepted yet): pending requests with no services
+          { service: { none: {} }, mechanicId: null },
+          // Accepted unknown services OR any accepted requests: mechanicId is set
+          { mechanicId }
+        ],
+        status: { in: ["pending", "proposed", "accepted"] }
+      },
+      include: {
+        customer: true,
+        service: true
+      },
+      orderBy: { request_date: "asc" }
+    });
+
+    const requestsWithDistance = await enrichRequestsWithDistance(requests, mechanicId);
+
+    console.log("getActiveRequests - Total requests:", requestsWithDistance.length);
+    requestsWithDistance.forEach((request, idx) => {
+      console.log(`Request ${idx}: id=${request.id}, status=${request.status}, services=${request.service.length}, distance=${request.distance}, serviceNames=[${request.service.map(s => s.name).join(",")}]`);
+    });
+
+    res.json(requestsWithDistance);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
@@ -592,7 +711,10 @@ export const acceptServiceRequest = async (req, res) => {
 
     const updatedRequest = await prisma.serviceRequest.update({
       where: { id: requestId },
-      data: { status: "accepted" },
+      data: {
+        status: "accepted",
+        mechanicId: mechanicId // Set the mechanic who accepted this request
+      },
       include: {
         service: true,
         mechanic: {
@@ -658,7 +780,10 @@ export const rejectServiceRequest = async (req, res) => {
 
     const updatedRequest = await prisma.serviceRequest.update({
       where: { id: requestId },
-      data: { status: "cancelled" },
+      data: {
+        status: "cancelled",
+        mechanicId: mechanicId // Set mechanic who rejected it for history tracking
+      },
       include: {
         service: true,
         mechanic: {

@@ -11,32 +11,69 @@ export const useServiceRequests = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState("pending"); // pending, accepted, in-progress, completed, cancelled
 
+  const mapIncomingRequest = (req) => {
+    const requestLat = Number(req.request_lat ?? req.req_lat);
+    const requestLng = Number(req.request_lng ?? req.req_lng);
+    const parsedBackendDistance = Number(req.distance);
+    const backendDistance = Number.isFinite(parsedBackendDistance)
+      ? parsedBackendDistance
+      : null;
+    const hasCoordinates = Number.isFinite(requestLat) && Number.isFinite(requestLng);
+    const coordinateLabel = hasCoordinates
+      ? `${requestLat.toFixed(6)}, ${requestLng.toFixed(6)}`
+      : "Unknown";
+    const normalizedAddress = typeof req.address === "string" ? req.address.trim() : "";
+    const hasValidAddress = Boolean(normalizedAddress) && normalizedAddress.toLowerCase() !== "unknown";
+    const serviceItems = Array.isArray(req.service) ? req.service : [];
+    const isKnownService = serviceItems.length > 0;
+    const serviceFee = serviceItems.reduce(
+      (sum, serviceItem) => sum + Number(serviceItem?.price ?? 0),
+      0
+    );
+    const tripPrice = Number(req.trip_price) || 0;
+    const parsedTotalPrice = Number(req.total_price);
+    const totalPrice = Number.isFinite(parsedTotalPrice)
+      ? parsedTotalPrice
+      : tripPrice + serviceFee;
+
+    return {
+      id: req.id,
+      customerName: req.customer?.name || "Unknown Customer",
+      customerPhone: req.customer?.phone,
+      location: {
+        address: hasValidAddress ? normalizedAddress : coordinateLabel,
+        lat: hasCoordinates ? requestLat : null,
+        lng: hasCoordinates ? requestLng : null,
+      },
+      distance: backendDistance,
+      serviceType: req.service?.map((serviceItem) => serviceItem.name).join(", ") || "Unknown Service",
+      serviceCategory: req.service?.[0]?.serviceType ? req.service[0].serviceType.charAt(0).toUpperCase() + req.service[0].serviceType.slice(1) : "Unknown",
+      isKnownService,
+      serviceFee,
+      status: req.status,
+      tripPrice,
+      estimatedTripFee: tripPrice,
+      totalPrice,
+      proposedPrice: req.proposed_price,
+      description: req.description,
+      request_lat: hasCoordinates ? requestLat : null,
+      request_lng: hasCoordinates ? requestLng : null,
+      requestedAt: req.request_date,
+      createdAt: req.request_date,
+      customerApproved: req.customerApproved,
+    };
+  };
+
   useEffect(() => {
     // Fetch service requests from API
     const fetchRequests = async () => {
       setIsLoading(true);
 
       try {
-        const response = await serviceRequestsService.getIncomingRequests();
+        const response = await serviceRequestsService.getActiveRequests();
 
         // Transform API response to match expected format
-        const transformedRequests = response.map((req) => ({
-          id: req.id,
-          customer: req.customer?.name || "Unknown",
-          location: req.address,
-          distance: req.distance || 0,
-          service:
-            req.service?.map((s) => s.name).join(", ") || "Unknown Service",
-          status: req.status,
-          tripPrice: req.trip_price,
-          totalPrice: req.total_price,
-          proposedPrice: req.proposed_price,
-          description: req.description,
-          lat: req.request_lat,
-          lng: req.request_lng,
-          createdAt: req.request_date,
-          customerApproved: req.customerApproved,
-        }));
+        const transformedRequests = response.map(mapIncomingRequest);
 
         setRequests(transformedRequests);
       } catch (error) {
@@ -80,10 +117,10 @@ export const useServiceRequests = () => {
         prevRequests.map((req) =>
           req.id === requestId
             ? {
-                ...req,
-                status: "accepted",
-                acceptedAt: new Date().toISOString(),
-              }
+              ...req,
+              status: "accepted",
+              acceptedAt: new Date().toISOString(),
+            }
             : req,
         ),
       );
@@ -152,22 +189,8 @@ export const useServiceRequests = () => {
   const refreshRequests = async () => {
     setIsLoading(true);
     try {
-      const response = await serviceRequestsService.getIncomingRequests();
-      const transformedRequests = response.map((req) => ({
-        id: req.id,
-        customerName: req.customer?.name || "Unknown Customer",
-        customerPhone: req.customer?.phone,
-        serviceType: req.service?.[0]?.serviceType || "unknown",
-        status: req.status,
-        location: req.address,
-        distance: req.distance || 0,
-        description: req.description,
-        requestedAt: req.request_date,
-        tripPrice: req.trip_price,
-        totalPrice: req.total_price,
-        proposedPrice: req.proposed_price,
-        customerApproved: req.customerApproved,
-      }));
+      const response = await serviceRequestsService.getActiveRequests();
+      const transformedRequests = response.map(mapIncomingRequest);
       setRequests(transformedRequests);
     } catch (error) {
       console.error("Failed to refresh requests:", error);

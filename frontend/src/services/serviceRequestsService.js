@@ -130,11 +130,20 @@ const serviceRequestsService = {
   // =====================
 
   /**
-   * Get incoming service requests for mechanic
+   * Get incoming service requests for mechanic (pending only)
    * @returns {Promise} Array of incoming requests
    */
   getIncomingRequests: async () => {
     const response = await apiClient.get("/servicerequests/mechanic/incoming");
+    return response.data;
+  },
+
+  /**
+   * Get all active service requests for mechanic (pending, accepted, in-progress)
+   * @returns {Promise} Array of active requests
+   */
+  getActiveRequests: async () => {
+    const response = await apiClient.get("/servicerequests/mechanic/active");
     return response.data;
   },
 

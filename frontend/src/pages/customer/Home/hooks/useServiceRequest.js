@@ -48,11 +48,11 @@ export const useServiceRequest = (userLocation) => {
       const response = await serviceRequestsService.getServicesByMechanic(mechanicId);
       const normalized = Array.isArray(response)
         ? response.map((service) => ({
-            id: service.id,
-            name: service.name || service.serviceType || "Custom service",
-            price: Number(service.price ?? 0),
-            serviceType: service.serviceType || "other",
-          }))
+          id: service.id,
+          name: service.name || service.serviceType || "Custom service",
+          price: Number(service.price ?? 0),
+          serviceType: service.serviceType || "other",
+        }))
         : [];
       setServiceOptions(normalized);
     } catch (error) {
@@ -145,8 +145,20 @@ export const useServiceRequest = (userLocation) => {
         .map((id) => Number(id))
         .filter((id) => Number.isFinite(id));
 
+      const mechanicLat = Number(selectedMechanic?.lat);
+      const mechanicLng = Number(selectedMechanic?.lng);
+      const fallbackAddress = Number.isFinite(mechanicLat) && Number.isFinite(mechanicLng)
+        ? `${mechanicLat.toFixed(6)}, ${mechanicLng.toFixed(6)}`
+        : "Current Location";
+      const selectedLocation = typeof selectedMechanic?.location === "string"
+        ? selectedMechanic.location.trim()
+        : "";
+      const requestAddress = selectedLocation && selectedLocation.toLowerCase() !== "unknown"
+        ? selectedLocation
+        : fallbackAddress;
+
       const requestData = {
-        address: selectedMechanic.location || "Current Location",
+        address: requestAddress,
         request_lat: userLocation[0],
         request_lng: userLocation[1],
         trip_price: calculatedTripFee,
@@ -162,9 +174,9 @@ export const useServiceRequest = (userLocation) => {
 
       alert(
         `Request sent successfully!\n\n` +
-          `Trip Fee: $${calculatedTripFee}\n` +
-          `Photos: ${photos.length}\n\n` +
-          `You'll be notified when a mechanic responds.`,
+        `Trip Fee: $${calculatedTripFee}\n` +
+        `Photos: ${photos.length}\n\n` +
+        `You'll be notified when a mechanic responds.`,
       );
 
       closeServiceRequest();
