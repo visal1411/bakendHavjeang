@@ -20,7 +20,6 @@ import { useCustomerHistory } from './useCustomerHistory';
 import { cn } from '@/lib/utils';
 import { staggerContainer, staggerItem, fadeIn, modalContent, backdropFade } from '@/lib/animations';
 
-const ACTIVE_STATUSES = ['pending', 'accepted', 'in-progress'];
 const COMPLETED_STATUSES = ['completed', 'cancelled'];
 
 const History = () => {
@@ -115,12 +114,10 @@ const History = () => {
 
   const filteredHistory = baseHistory.filter((item) => {
     if (activeTab === 'all') return true;
-    if (activeTab === 'active') return ACTIVE_STATUSES.includes(item.status?.toLowerCase());
     if (activeTab === 'completed') return COMPLETED_STATUSES.includes(item.status?.toLowerCase());
     return true;
   });
 
-  const activeCount = baseHistory.filter((item) => ACTIVE_STATUSES.includes(item.status?.toLowerCase())).length;
   const completedCount = baseHistory.filter((item) => COMPLETED_STATUSES.includes(item.status?.toLowerCase())).length;
   const totalSpent = baseHistory
     .filter((item) => item.status?.toLowerCase() === 'completed')
@@ -199,7 +196,7 @@ const History = () => {
 
           {!isLoading && baseHistory.length > 0 && (
             <>
-              <div className="grid grid-cols-3 gap-3 mb-6">
+              <div className="grid grid-cols-2 gap-3 mb-6">
                 <button
                   type="button"
                   onClick={() => setActiveTab('all')}
@@ -213,21 +210,6 @@ const History = () => {
                   <p className={cn('font-bold text-sm', activeTab === 'all' ? 'text-white' : 'text-gray-900')}>All</p>
                   <p className={cn('text-xs', activeTab === 'all' ? 'text-blue-100' : 'text-gray-600')}>
                     {baseHistory.length} services
-                  </p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('active')}
-                  className={cn(
-                    'p-4 rounded-xl text-center transition-all border-2',
-                    activeTab === 'active'
-                      ? 'bg-primary text-white border-primary shadow-lg'
-                      : 'bg-white text-gray-700 border-gray-200 hover:border-primary hover:shadow-md'
-                  )}
-                >
-                  <p className={cn('font-bold text-sm', activeTab === 'active' ? 'text-white' : 'text-gray-900')}>Active</p>
-                  <p className={cn('text-xs', activeTab === 'active' ? 'text-blue-100' : 'text-gray-600')}>
-                    {activeCount} ongoing
                   </p>
                 </button>
                 <button

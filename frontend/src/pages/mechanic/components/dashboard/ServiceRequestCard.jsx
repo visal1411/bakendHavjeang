@@ -11,7 +11,7 @@ import { Phone, MapPin, Clock, Check, X, Zap } from 'lucide-react';
  * - Simple language (no jargon)
  * - Obvious actions (big buttons with clear labels)
  */
-export const ServiceRequestCard = ({ request, onAccept, onDecline, onViewDetails }) => {
+export const ServiceRequestCard = ({ request, onAccept, onDecline, onViewDetails, onComplete }) => {
   if (!request) {
     return null;
   }
@@ -149,6 +149,14 @@ export const ServiceRequestCard = ({ request, onAccept, onDecline, onViewDetails
               >
                 <MapPin className="w-5 h-5 mr-2" />
                 See Location
+              </Button>
+              <Button
+                onClick={() => onComplete?.(request.id)}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white h-12 text-base font-bold"
+                size="lg"
+              >
+                <Check className="w-5 h-5 mr-2" />
+                Complete Job
               </Button>
               <a href={`tel:${request.customerPhone}`}>
                 <Button className="bg-green-600 hover:bg-green-700 text-white h-12 px-6">

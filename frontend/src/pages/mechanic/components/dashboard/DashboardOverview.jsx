@@ -67,6 +67,13 @@ export const DashboardOverview = () => {
     }
   };
 
+  const handleCompleteRequest = async (requestId) => {
+    const result = await updateRequestStatus(requestId, 'completed');
+    if (result.success) {
+      setSelectedTab('completed');
+    }
+  };
+
   const handleUpdateStatus = async (requestId, newStatus) => {
     const result = await updateRequestStatus(requestId, newStatus);
     if (result.success) {
@@ -241,6 +248,7 @@ export const DashboardOverview = () => {
                       request={request}
                       onAccept={handleAcceptRequest}
                       onDecline={handleDeclineRequest}
+                      onComplete={handleCompleteRequest}
                       onViewDetails={handleViewDetails}
                     />
                   </motion.div>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import { X, Navigation, Phone, MapPin, Clock, PlayCircle, CheckCircle2, User } from 'lucide-react';
+import { X, Navigation, Phone, MapPin, Clock, CheckCircle2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -307,11 +307,11 @@ export const ServiceRequestDetailModal = ({ request, onClose, onUpdateStatus }) 
                   Get Directions
                 </Button>
                 <Button
-                  onClick={() => onUpdateStatus?.(request.id, 'in-progress')}
-                  className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"
+                  onClick={() => onUpdateStatus?.(request.id, 'completed')}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                 >
-                  <PlayCircle className="w-4 h-4 mr-2" />
-                  Start Job
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  Complete Job
                 </Button>
               </>
             )}

@@ -5,7 +5,7 @@ const MIN_TRIP_FEE_USD = Number(process.env.MIN_TRIP_FEE_USD) || 2;
 
 /**
  * Calculate trip price from customer to mechanic.
- * Returns price in cents (as integer) to match Prisma Int type
+ * Returns price in USD (integer) to match Prisma Int type.
  */
 export async function calculateTripPrice(customerLocation, mechanicLocation) {
   if (!mechanicLocation.lat || !mechanicLocation.lng) {
@@ -14,20 +14,17 @@ export async function calculateTripPrice(customerLocation, mechanicLocation) {
 
   const tripDistanceKm = await getDistanceKmORS(customerLocation, mechanicLocation);
   const rawPrice = Number((tripDistanceKm * PRICE_PER_KM_USD).toFixed(2));
-  const tripPrice = Math.max(MIN_TRIP_FEE_USD, rawPrice);
-
-  // Convert to cents (integer) for Prisma Int field
-  const tripPriceInCents = Math.round(tripPrice * 100);
+  const tripPrice = Math.round(Math.max(MIN_TRIP_FEE_USD, rawPrice));
 
   return {
     tripDistanceKm: Number(tripDistanceKm.toFixed(2)),
-    tripPrice: tripPriceInCents
+    tripPrice
   };
 }
 
 /**
  * Calculate total price for known services.
- * All prices are in same unit (cents if trip_price is cents)
+ * All prices are in same unit (USD).
  */
 export function calculateTotalPrice(tripPrice, services = []) {
   const servicesTotal = services.reduce((sum, s) => sum + Number(s.price), 0);
