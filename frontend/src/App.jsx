@@ -1,11 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import AuthPage from './pages/auth/AuthPage';
 import CustomerHome from './pages/customer/Home/CustomerHome';
 import CustomerProfile from './pages/customer/Profile';
 import MechanicDashboard from './pages/mechanic/Dashboard/MechanicDashboard';
 import MechanicProfile from './pages/mechanic/Profile';
 import RoleBasedRoute from './components/shared/RoleBasedRoute';
+import NotificationCenter from './components/shared/NotificationCenter';
 
 /**
  * App Component - Main Application Router
@@ -73,52 +75,56 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Routes>
-          {/* Root route - intelligent redirect */}
-          <Route path="/" element={<RootRedirect />} />
+        <NotificationProvider>
+          <NotificationCenter />
 
-          {/* Authentication route */}
-          <Route path="/auth" element={<AuthPage />} />
+          <Routes>
+            {/* Root route - intelligent redirect */}
+            <Route path="/" element={<RootRedirect />} />
 
-          {/* Customer routes - role-based protected */}
-          <Route
-            path="/customer/home"
-            element={
-              <RoleBasedRoute allowedRole="customer">
-                <CustomerHome />
-              </RoleBasedRoute>
-            }
-          />
-          <Route
-            path="/customer/profile"
-            element={
-              <RoleBasedRoute allowedRole="customer">
-                <CustomerProfile />
-              </RoleBasedRoute>
-            }
-          />
+            {/* Authentication route */}
+            <Route path="/auth" element={<AuthPage />} />
 
-          {/* Mechanic routes - role-based protected */}
-          <Route
-            path="/mechanic/dashboard"
-            element={
-              <RoleBasedRoute allowedRole="mechanic">
-                <MechanicDashboard />
-              </RoleBasedRoute>
-            }
-          />
-          <Route
-            path="/mechanic/profile"
-            element={
-              <RoleBasedRoute allowedRole="mechanic">
-                <MechanicProfile />
-              </RoleBasedRoute>
-            }
-          />
+            {/* Customer routes - role-based protected */}
+            <Route
+              path="/customer/home"
+              element={
+                <RoleBasedRoute allowedRole="customer">
+                  <CustomerHome />
+                </RoleBasedRoute>
+              }
+            />
+            <Route
+              path="/customer/profile"
+              element={
+                <RoleBasedRoute allowedRole="customer">
+                  <CustomerProfile />
+                </RoleBasedRoute>
+              }
+            />
 
-          {/* Catch-all route - redirect to root */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            {/* Mechanic routes - role-based protected */}
+            <Route
+              path="/mechanic/dashboard"
+              element={
+                <RoleBasedRoute allowedRole="mechanic">
+                  <MechanicDashboard />
+                </RoleBasedRoute>
+              }
+            />
+            <Route
+              path="/mechanic/profile"
+              element={
+                <RoleBasedRoute allowedRole="mechanic">
+                  <MechanicProfile />
+                </RoleBasedRoute>
+              }
+            />
+
+            {/* Catch-all route - redirect to root */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </NotificationProvider>
       </BrowserRouter>
     </AuthProvider>
   );

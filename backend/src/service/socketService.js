@@ -1,10 +1,9 @@
 // src/service/socketService.js
 import jwt from 'jsonwebtoken';
-import { prisma } from '../config/db.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// Store user socket connections: userId -> socketId
+// Store user socket connections: userId -> Set<socketId>
 const userSockets = new Map();
 
 /**
@@ -16,7 +15,14 @@ export const initializeSocket = (io) => {
   // Authentication middleware for Socket.IO
   io.use(async (socket, next) => {
     try {
-      const token = socket.handshake.auth.token || socket.handshake.headers.token;
+      const rawToken =
+        socket.handshake.auth.token ||
+        socket.handshake.headers.authorization ||
+        socket.handshake.headers.token;
+      const token =
+        typeof rawToken === 'string' && rawToken.startsWith('Bearer ')
+          ? rawToken.slice(7)
+          : rawToken;
       
       if (!token) {
         return next(new Error('Authentication error: No token provided'));
@@ -24,7 +30,12 @@ export const initializeSocket = (io) => {
 
       const decoded = jwt.verify(token, JWT_SECRET);
       socket.userId = decoded.id;
-      socket.userType = decoded.role;
+      socket.userType = decoded.usertype || decoded.role;
+
+      if (!socket.userId || !socket.userType) {
+        return next(new Error('Authentication error: Invalid token payload'));
+      }
+
       next();
     } catch (err) {
       next(new Error('Authentication error: Invalid token'));
@@ -37,8 +48,11 @@ export const initializeSocket = (io) => {
 
     console.log(`User connected: ${userId} (${userType})`);
 
-    // Store user socket connection
-    userSockets.set(userId, socket.id);
+    // Store user socket connection (supports multiple tabs/devices)
+    if (!userSockets.has(userId)) {
+      userSockets.set(userId, new Set());
+    }
+    userSockets.get(userId).add(socket.id);
 
     // Join user-specific room for notifications
     socket.join(`user_${userId}`);
@@ -58,7 +72,13 @@ export const initializeSocket = (io) => {
     // Handle disconnect
     socket.on('disconnect', () => {
       console.log(`User disconnected: ${userId}`);
-      userSockets.delete(userId);
+      const sockets = userSockets.get(userId);
+      if (!sockets) return;
+
+      sockets.delete(socket.id);
+      if (!sockets.size) {
+        userSockets.delete(userId);
+      }
     });
   });
 };
@@ -90,7 +110,8 @@ export const notifyUser = (userId, event, data) => {
  */
 export const isUserOnline = (userId) => {
   if (userId == null) return false;
-  return userSockets.has(userId);
+  const sockets = userSockets.get(userId);
+  return Boolean(sockets && sockets.size > 0);
 };
 
 /**

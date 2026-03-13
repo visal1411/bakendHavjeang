@@ -1,5 +1,5 @@
 import { Star, MapPin, Clock, Phone, Bookmark, Wrench, ChevronRight } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion as Motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +21,7 @@ export const MechanicCard = ({ mechanic, onSelect, isSaved, onToggleSave, isReco
   const totalReviews = mechanic?.totalReviews ?? 0;
 
   return (
-    <motion.div
+    <Motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
@@ -46,7 +46,7 @@ export const MechanicCard = ({ mechanic, onSelect, isSaved, onToggleSave, isReco
         )}>
           <div className="flex items-start gap-3">
             {/* Mechanic Avatar with pulse animation when available - LARGER for recommended */}
-            <motion.div
+            <Motion.div
               className={cn(
                 "relative rounded-2xl flex items-center justify-center flex-shrink-0",
                 isRecommended ? "w-16 h-16" : "w-14 h-14",
@@ -60,7 +60,7 @@ export const MechanicCard = ({ mechanic, onSelect, isSaved, onToggleSave, isReco
                 isRecommended ? "w-8 h-8" : "w-7 h-7"
               )} />
               {mechanic.available && (
-                <motion.div
+                <Motion.div
                   className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-green-400 rounded-full border-2 border-white shadow-lg"
                   animate={{
                     scale: [1, 1.3, 1],
@@ -73,7 +73,7 @@ export const MechanicCard = ({ mechanic, onSelect, isSaved, onToggleSave, isReco
                   transition={{ repeat: Infinity, duration: 2 }}
                 />
               )}
-            </motion.div>
+            </Motion.div>
 
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between mb-2">
@@ -133,13 +133,13 @@ export const MechanicCard = ({ mechanic, onSelect, isSaved, onToggleSave, isReco
                 </div>
                 <div className="flex items-center gap-2">
                   {/* Save/Bookmark Button with animation */}
-                  <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                  <Motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                     <Button
                       variant="ghost"
                       size="icon"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onToggleSave(mechanic.id);
+                        onToggleSave(mechanic);
                       }}
                       className={cn(
                         "flex-shrink-0",
@@ -147,7 +147,7 @@ export const MechanicCard = ({ mechanic, onSelect, isSaved, onToggleSave, isReco
                       )}
                       aria-label={isSaved ? "Remove from saved" : "Save mechanic"}
                     >
-                      <motion.div
+                      <Motion.div
                         animate={isSaved ? { scale: [1, 1.2, 1] } : {}}
                         transition={{ duration: 0.3 }}
                       >
@@ -160,11 +160,11 @@ export const MechanicCard = ({ mechanic, onSelect, isSaved, onToggleSave, isReco
                               : "text-gray-400 hover:text-primary"
                           )}
                         />
-                      </motion.div>
+                      </Motion.div>
                     </Button>
-                  </motion.div>
+                  </Motion.div>
                   {mechanic.available && (
-                    <motion.div
+                    <Motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       transition={{ type: 'spring', stiffness: 500, damping: 25 }}
@@ -172,7 +172,7 @@ export const MechanicCard = ({ mechanic, onSelect, isSaved, onToggleSave, isReco
                       <Badge variant="success" className={cn(
                         isRecommended && "text-sm px-3 py-1"
                       )}>Available</Badge>
-                    </motion.div>
+                    </Motion.div>
                   )}
                 </div>
               </div>
@@ -222,7 +222,7 @@ export const MechanicCard = ({ mechanic, onSelect, isSaved, onToggleSave, isReco
               </div>
 
               <div className="flex gap-2">
-                <motion.div
+                <Motion.div
                   className="flex-1"
                   whileTap={{ scale: 0.95 }}
                   whileHover={{ scale: isRecommended ? 1.02 : 1 }}
@@ -243,8 +243,8 @@ export const MechanicCard = ({ mechanic, onSelect, isSaved, onToggleSave, isReco
                     )} />
                     Call
                   </Button>
-                </motion.div>
-                <motion.div
+                </Motion.div>
+                <Motion.div
                   className="flex-1"
                   whileTap={{ scale: mechanic.available ? 0.95 : 1 }}
                   whileHover={{ scale: mechanic.available && isRecommended ? 1.02 : 1 }}
@@ -265,25 +265,25 @@ export const MechanicCard = ({ mechanic, onSelect, isSaved, onToggleSave, isReco
                     {mechanic.available ? (
                       <>
                         Request
-                        <motion.div
+                        <Motion.div
                           animate={{ x: [0, 3, 0] }}
                           transition={{ repeat: Infinity, duration: 1.5 }}
                         >
                           <ChevronRight className={cn(
                             isRecommended ? "w-5 h-5" : "w-4 h-4"
                           )} />
-                        </motion.div>
+                        </Motion.div>
                       </>
                     ) : (
                       'Unavailable'
                     )}
                   </Button>
-                </motion.div>
+                </Motion.div>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
-    </motion.div>
+    </Motion.div>
   );
 };

@@ -18,10 +18,23 @@ dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
+
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(",").map((origin) => origin.trim())
+  : ["http://localhost:5173", "http://127.0.0.1:5173"];
+
+const corsOrigin = (origin, callback) => {
+  if (!origin || allowedOrigins.includes(origin)) {
+    return callback(null, true);
+  }
+
+  return callback(new Error("Not allowed by CORS"));
+};
+
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CORS_ORIGIN,
-    methods: ["GET", "POST"],
+    origin: allowedOrigins,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true,
   },
 });
@@ -32,7 +45,8 @@ initializeSocket(io);
 // Middleware
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN,
+    origin: corsOrigin,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,
   })
 );

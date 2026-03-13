@@ -733,7 +733,12 @@ export const getActiveRequests = async (req, res) => {
         status: { in: ["pending", "proposed", "accepted"] },
       },
       include: {
-        customer: true,
+        customer: {
+    select: {
+      name: true,
+      phone: true
+    }
+  },
         service: true,
       },
       orderBy: { request_date: "asc" },

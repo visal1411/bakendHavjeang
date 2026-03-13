@@ -7,6 +7,15 @@ import apiClient from "./api";
 
 const pushService = {
   /**
+   * Fetch VAPID public key from backend
+   * @returns {Promise<{publicKey: string | null}>}
+   */
+  getPublicKey: async () => {
+    const response = await apiClient.get("/push/public-key");
+    return response.data;
+  },
+
+  /**
    * Subscribe to push notifications
    * @param {Object} subscription - Push subscription object from browser
    * @param {string} subscription.endpoint - Push endpoint URL
@@ -15,7 +24,12 @@ const pushService = {
    * @returns {Promise} Subscription confirmation
    */
   subscribe: async (subscription) => {
-    const response = await apiClient.post("/push/subscribe", subscription);
+    const normalized =
+      typeof subscription?.toJSON === "function"
+        ? subscription.toJSON()
+        : subscription;
+
+    const response = await apiClient.post("/push/subscribe", normalized);
     return response.data;
   },
 
@@ -26,7 +40,14 @@ const pushService = {
    * @returns {Promise} Unsubscribe confirmation
    */
   unsubscribe: async (subscription) => {
-    const response = await apiClient.post("/push/unsubscribe", subscription);
+    const normalized =
+      typeof subscription?.toJSON === "function"
+        ? subscription.toJSON()
+        : subscription;
+
+    const response = await apiClient.post("/push/unsubscribe", {
+      endpoint: normalized?.endpoint,
+    });
     return response.data;
   },
 };

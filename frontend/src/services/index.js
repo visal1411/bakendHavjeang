@@ -10,4 +10,5 @@ export { default as authService } from "./authService";
 export { default as servicesService } from "./servicesService";
 export { default as serviceRequestsService } from "./serviceRequestsService";
 export { default as pushService } from "./pushService";
+export { default as realtimeService } from "./realtimeService";
 export { default as apiClient } from "./api";
