@@ -7,6 +7,7 @@ import { RecenterButton } from './RecenterButton';
 import { ServiceRequestModal } from './ServiceRequestModal';
 import { BottomSheet } from './BottomSheet';
 import { LocationStatusIndicator } from './LocationStatusIndicator';
+import { ActiveRequestBanner } from './ActiveRequestBanner';
 
 /**
  * ExploreView Component
@@ -95,6 +96,16 @@ export const ExploreView = ({
     onSubmit,
     onRetryServices
   },
+
+  // Active Request
+  activeRequest: {
+    request,
+    isLoading: isActiveRequestLoading,
+    onRefresh,
+    onCancel,
+    onAcceptPrice,
+    onDeclinePrice,
+  },
   
   // Bottom Sheet
   bottomSheet: { ref, state, handlers, getHeight },
@@ -123,6 +134,15 @@ export const ExploreView = ({
           isLoading={isLoading}
         />
       )}
+
+      <ActiveRequestBanner
+        activeRequest={request}
+        isLoading={isActiveRequestLoading}
+        onRefresh={onRefresh}
+        onCancel={onCancel}
+        onAcceptPrice={onAcceptPrice}
+        onDeclinePrice={onDeclinePrice}
+      />
 
       {/* Map Container - Always show map, even without location permission */}
       <div className="absolute inset-0 z-0" role="main" aria-label="Map view">

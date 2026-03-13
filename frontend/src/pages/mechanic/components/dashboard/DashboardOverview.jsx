@@ -37,6 +37,7 @@ export const DashboardOverview = () => {
     acceptRequest,
     declineRequest,
     updateRequestStatus,
+    proposePrice,
     refreshRequests,
     isLoading: requestsLoading
   } = useServiceRequests();
@@ -61,10 +62,7 @@ export const DashboardOverview = () => {
   };
 
   const handleDeclineRequest = async (requestId) => {
-    const result = await declineRequest(requestId);
-    if (result.success) {
-      console.log('Request declined:', requestId);
-    }
+    await declineRequest(requestId);
   };
 
   const handleCompleteRequest = async (requestId) => {
@@ -77,8 +75,6 @@ export const DashboardOverview = () => {
   const handleUpdateStatus = async (requestId, newStatus) => {
     const result = await updateRequestStatus(requestId, newStatus);
     if (result.success) {
-      console.log(`Request ${requestId} status updated to ${newStatus}`);
-      // Find and update the selected request if it's the same one
       const updatedRequest = requests.find(r => r.id === requestId);
       if (updatedRequest && selectedRequest?.id === requestId) {
         setSelectedRequest({ ...updatedRequest, status: newStatus });
@@ -99,14 +95,14 @@ export const DashboardOverview = () => {
     await Promise.all([refreshStats(), refreshRequests()]);
   };
 
-  const handleAvailabilityToggle = (newStatus) => {
-    console.log('Availability toggled:', newStatus ? 'Available' : 'Offline');
+  const handleAvailabilityToggle = () => {
+    // Handled by AvailabilityToggle's internal state + localStorage
   };
 
   const tabs = [
     { id: 'pending', label: 'New Requests', count: counts.pending || 0, color: 'yellow', icon: AlertCircle },
+    { id: 'proposed', label: 'Proposed', count: counts.proposed || 0, color: 'orange', icon: Clock },
     { id: 'accepted', label: 'Accepted', count: counts.accepted || 0, color: 'blue', icon: CheckCircle },
-    { id: 'completed', label: 'Completed', count: counts.completed || 0, color: 'green', icon: CheckCircle },
     { id: 'cancelled', label: 'Cancelled', count: counts.cancelled || 0, color: 'red', icon: XCircle }
   ];
 
@@ -182,8 +178,8 @@ export const DashboardOverview = () => {
               </div>
             </div>
 
-            {/* Filter Tabs - Simplified */}
-            <div className="grid grid-cols-3 gap-3 mb-6">
+            {/* Filter Tabs */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
               {tabs.map(tab => {
                 const Icon = tab.icon;
                 const isActive = selectedTab === tab.id;
@@ -267,7 +263,7 @@ export const DashboardOverview = () => {
           />
 
           {/* Earnings Summary */}
-          <EarningsSummary earnings={{ total: stats?.totalEarnings || 0, lastWeek: [] }} />
+          <EarningsSummary totalEarnings={stats?.totalEarnings || 0} />
 
           {/* Performance Summary */}
           <div className="bg-white rounded-2xl shadow-sm p-6">
@@ -305,6 +301,7 @@ export const DashboardOverview = () => {
           request={selectedRequest}
           onClose={() => setSelectedRequest(null)}
           onUpdateStatus={handleUpdateStatus}
+          onProposePrice={proposePrice}
         />
       )}
     </>

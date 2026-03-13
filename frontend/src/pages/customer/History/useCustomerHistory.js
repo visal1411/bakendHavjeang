@@ -27,14 +27,25 @@ export const useCustomerHistory = () => {
       const transformedHistory = response.map((request) => {
         const tripFee = parseAmount(request.trip_price);
         const proposedPrice = parseAmount(request.proposed_price);
-        const serviceItems = Array.isArray(request.service) ? request.service : [];
+        const serviceItems = Array.isArray(request.service)
+          ? request.service
+          : [];
         const serviceFee = serviceItems.length
-          ? serviceItems.reduce((sum, service) => sum + parseAmount(service.price), 0)
+          ? serviceItems.reduce(
+              (sum, service) => sum + parseAmount(service.price),
+              0,
+            )
           : proposedPrice;
-        const totalAmount = parseAmount(request.total_price) || tripFee + serviceFee;
-        const normalizedStatus = (request.status || '').toLowerCase();
-        const canRespondToPriceChange = proposedPrice > 0 && normalizedStatus === 'pending' && request.customerApproved !== true;
-        const canCancel = ['pending', 'accepted', 'in-progress'].includes(normalizedStatus);
+        const totalAmount =
+          parseAmount(request.total_price) || tripFee + serviceFee;
+        const normalizedStatus = (request.status || "").toLowerCase();
+        const canRespondToPriceChange =
+          proposedPrice > 0 &&
+          normalizedStatus === "proposed" &&
+          request.customerApproved !== true;
+        const canCancel = ["pending", "proposed", "accepted"].includes(
+          normalizedStatus,
+        );
 
         return {
           id: request.id,
@@ -50,7 +61,7 @@ export const useCustomerHistory = () => {
           serviceType: serviceItems.length
             ? serviceItems.map((service) => service.name).join(", ")
             : "Custom Service",
-          status: request.status || 'pending',
+          status: request.status || "pending",
           location: request.address,
           tripFee,
           serviceFee,
@@ -89,7 +100,9 @@ export const useCustomerHistory = () => {
       // Update local state
       setHistory((prevHistory) =>
         prevHistory.map((req) =>
-          req.id === requestId ? { ...req, status: "cancelled", canCancel: false } : req,
+          req.id === requestId
+            ? { ...req, status: "cancelled", canCancel: false }
+            : req,
         ),
       );
 

@@ -13,7 +13,7 @@ export const MechanicCard = ({ mechanic, onSelect, isSaved, onToggleSave, isReco
   const services = Array.isArray(mechanic?.services) ? mechanic.services : [];
   const distanceValue = Number.isFinite(Number(mechanic?.distance)) ? Number(mechanic.distance) : null;
   const rawTripPrice = Number.isFinite(Number(mechanic?.trip_price)) ? Number(mechanic.trip_price) : null;
-  const displayTripPrice = rawTripPrice !== null ? (rawTripPrice / 1000).toFixed(1) : null;
+  const displayTripPrice = rawTripPrice !== null ? rawTripPrice.toFixed(2) : null;
   const workHours = mechanic?.workHours || 'Hours not provided';
   const responseTime = mechanic?.responseTime || '~10 min';
   const displayLocation = mechanic?.location || 'Location not provided';
@@ -110,7 +110,7 @@ export const MechanicCard = ({ mechanic, onSelect, isSaved, onToggleSave, isReco
                           <>
                             <span className="text-gray-300">•</span>
                             <div className="text-sm font-semibold text-amber-600">
-                              ${displayTripPrice}k
+                              ${displayTripPrice}
                             </div>
                           </>
                         )}

@@ -9,7 +9,7 @@ if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 } else {
   console.warn(
-    "Web Push VAPID keys are not set. Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY in your environment to enable web push."
+    "Web Push VAPID keys are not set. Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY in your environment to enable web push.",
   );
 }
 
@@ -110,4 +110,14 @@ export const sendPushToUser = async (userId, payload) => {
   } catch (err) {
     console.error("sendPushToUser failed", err);
   }
+};
+
+export const getPublicKey = (req, res) => {
+  if (!VAPID_PUBLIC_KEY) {
+    return res
+      .status(503)
+      .json({ message: "Web push not configured", publicKey: null });
+  }
+
+  res.json({ publicKey: VAPID_PUBLIC_KEY });
 };

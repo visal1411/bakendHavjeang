@@ -43,8 +43,10 @@ export const useMechanics = (
     : [userLocation?.lat, userLocation?.lng];
 
   const hasValidUserLocation =
-    typeof userLat === "number" && Number.isFinite(userLat) &&
-    typeof userLng === "number" && Number.isFinite(userLng);
+    typeof userLat === "number" &&
+    Number.isFinite(userLat) &&
+    typeof userLng === "number" &&
+    Number.isFinite(userLng);
 
   // Initialize mechanics on mount
   useEffect(() => {
@@ -69,15 +71,15 @@ export const useMechanics = (
         const mechanicsWithDistance = response.map((mechanic) => {
           const mechanicLat = Number(mechanic.mechanic_lat);
           const mechanicLng = Number(mechanic.mechanic_lng);
-          const hasMechanicCoordinates = Number.isFinite(mechanicLat) && Number.isFinite(mechanicLng);
+          const hasMechanicCoordinates =
+            Number.isFinite(mechanicLat) && Number.isFinite(mechanicLng);
 
           const tripPrice = mechanic.trip_price ?? null;
-          const numericTripPrice = tripPrice !== null ? Number(tripPrice) : null;
+          const numericTripPrice =
+            tripPrice !== null ? Number(tripPrice) : null;
           const fallbackLocation = hasMechanicCoordinates
             ? `${mechanicLat.toFixed(6)}, ${mechanicLng.toFixed(6)}`
             : "Unknown";
-
-          console.log(`📍 Transforming ${mechanic.name}: trip_price=${mechanic.trip_price} (raw) → Number(${tripPrice}) → ${numericTripPrice}`);
 
           return {
             id: mechanic.id,
@@ -89,13 +91,21 @@ export const useMechanics = (
             rating: 4.5,
             totalReviews: 0,
             available: true,
-            services: mechanic.services || [],
+            services: Array.isArray(mechanic.services)
+              ? mechanic.services.map((s) =>
+                  typeof s === "string" ? s : s.name,
+                )
+              : [],
+            serviceTypes: Array.isArray(mechanic.services)
+              ? mechanic.services.map((s) =>
+                  typeof s === "string" ? s : s.serviceType,
+                )
+              : [],
             location: mechanic.location || fallbackLocation,
             phone: mechanic.phone,
           };
         });
 
-        console.log('✅ Mechanics transformed:', mechanicsWithDistance);
         setMechanics(mechanicsWithDistance);
         setFilteredMechanics(mechanicsWithDistance);
       } catch (error) {
@@ -117,7 +127,13 @@ export const useMechanics = (
 
     // Category filter
     if (selectedCategory !== "all" && selectedCategory) {
-      filtered = filtered.filter((m) => m.services.includes(selectedCategory));
+      filtered = filtered.filter(
+        (m) =>
+          (m.serviceTypes || []).includes(selectedCategory) ||
+          m.services.some((s) =>
+            s.toLowerCase().includes(selectedCategory.toLowerCase()),
+          ),
+      );
     }
 
     // Search filter

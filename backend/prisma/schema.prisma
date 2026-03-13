@@ -36,6 +36,7 @@ model Service {
   name        String      @db.VarChar(100)
   price       Int
   serviceType ServiceType
+  isActive    Boolean     @default(true)
 
   mechanicId Int
   mechanic   User @relation(fields: [mechanicId], references: [id])

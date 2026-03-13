@@ -139,12 +139,11 @@ const serviceRequestsService = {
   },
 
   /**
-   * Get mechanic work queue.
-   * Currently uses incoming requests endpoint.
-   * @returns {Promise} Array of requests
+   * Get mechanic work queue (pending, proposed, accepted requests).
+   * @returns {Promise} Array of active requests
    */
   getActiveRequests: async () => {
-    const response = await apiClient.get("/servicerequests/mechanic/incoming");
+    const response = await apiClient.get("/servicerequests/mechanic/active");
     return response.data;
   },
 

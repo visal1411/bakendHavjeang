@@ -31,14 +31,9 @@ export const useLocation = () => {
 
     const requestLocation = () => {
       if (!("geolocation" in navigator)) {
-        console.log("❌ Geolocation not supported");
         handleLocationDenied();
         return;
       }
-
-      console.log("📍 Requesting location from browser...");
-      console.log("🌐 Protocol:", window.location.protocol);
-      console.log("📱 User Agent:", navigator.userAgent);
 
       // First try to get current position
       navigator.geolocation.getCurrentPosition(
@@ -50,11 +45,6 @@ export const useLocation = () => {
           setUserLocation(userPos);
           setLocationPermission("granted");
           setIsLoading(false);
-          console.log(
-            "✅ Location access granted:",
-            `${userPos[0].toFixed(4)}, ${userPos[1].toFixed(4)}`,
-            `(±${Math.round(position.coords.accuracy)}m)`
-          );
 
           // Start watching position for live updates
           watchId = navigator.geolocation.watchPosition(
@@ -65,53 +55,20 @@ export const useLocation = () => {
                 position.coords.longitude,
               ];
               setUserLocation(newPos);
-              console.log(
-                "🔄 Location updated:",
-                `${newPos[0].toFixed(4)}, ${newPos[1].toFixed(4)}`
-              );
             },
             (error) => {
-              console.warn(
-                "⚠️ Watch position error:",
-                error.code,
-                error.message
-              );
+              console.warn("Watch position error:", error.code, error.message);
             },
             {
               enableHighAccuracy: true,
               maximumAge: 5000,
               timeout: 10000,
-            }
+            },
           );
         },
         // Error callback
         (error) => {
           if (!isMounted) return;
-
-          console.error("❌ Location error:", {
-            code: error.code,
-            message: error.message,
-          });
-
-          // Error codes: 1=PERMISSION_DENIED, 2=POSITION_UNAVAILABLE, 3=TIMEOUT
-          switch (error.code) {
-            case 1:
-              console.log("🚫 User denied location permission");
-              console.log(
-                "💡 To fix: Click lock icon in address bar → Location → Allow"
-              );
-              break;
-            case 2:
-              console.log("📡 Position unavailable - GPS signal issue");
-              console.log(
-                "💡 Make sure location services are enabled on your device"
-              );
-              break;
-            case 3:
-              console.log("⏱️ Location request timeout");
-              console.log("💡 Try moving to an area with better GPS signal");
-              break;
-          }
 
           handleLocationDenied();
         },
@@ -120,7 +77,7 @@ export const useLocation = () => {
           enableHighAccuracy: true, // Request GPS
           timeout: 15000, // 15 second timeout (longer for mobile)
           maximumAge: 0, // Don't use cached position
-        }
+        },
       );
     };
 
@@ -130,11 +87,6 @@ export const useLocation = () => {
       // Still set fallback location so map can work
       setUserLocation(FALLBACK_LOCATION);
       setIsLoading(false);
-      console.log(
-        "📍 Location denied - Using fallback location (Phnom Penh):",
-        FALLBACK_LOCATION
-      );
-      console.log("💡 Map will still work, but user location won't be shown");
     };
 
     // Request immediately
@@ -144,13 +96,11 @@ export const useLocation = () => {
       isMounted = false;
       if (watchId) {
         navigator.geolocation.clearWatch(watchId);
-        console.log("🛑 Stopped watching location");
       }
     };
   }, []);
 
   const retryLocation = () => {
-    console.log("🔄 Retrying location request...");
     setLocationPermission("pending");
     setIsLoading(true);
 
@@ -167,10 +117,8 @@ export const useLocation = () => {
         setUserLocation(userPos);
         setLocationPermission("granted");
         setIsLoading(false);
-        console.log("✅ Retry successful:", userPos);
       },
       (error) => {
-        console.error("❌ Retry failed:", error.code, error.message);
         setLocationPermission("denied");
         setUserLocation(FALLBACK_LOCATION);
         setIsLoading(false);
@@ -182,7 +130,7 @@ export const useLocation = () => {
         enableHighAccuracy: true,
         timeout: 10000,
         maximumAge: 0,
-      }
+      },
     );
   };
 

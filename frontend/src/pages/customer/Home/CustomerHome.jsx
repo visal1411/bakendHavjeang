@@ -12,6 +12,7 @@ import { useMechanics } from './hooks/useMechanics';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { useSavedMechanics } from './hooks/useSavedMechanics';
 import { useServiceRequest } from './hooks/useServiceRequest';
+import { useActiveRequest } from './hooks/useActiveRequest';
 import { useBottomSheet } from './hooks/useBottomSheet';
 import { useMapControl } from './hooks/useMapControl';
 
@@ -65,6 +66,7 @@ const CustomerHome = () => {
   // === FEATURE HOOKS ===
   const map = useMapControl();
   const serviceRequest = useServiceRequest(location.userLocation);
+  const activeRequest = useActiveRequest();
   const bottomSheet = useBottomSheet();
   
   // === UI STATE ===
@@ -130,6 +132,16 @@ const CustomerHome = () => {
       map.recenterToUser(location.userLocation);
     }
   }, [location?.userLocation, map]);
+
+  const handleSubmitServiceRequest = useCallback(async () => {
+    const response = await serviceRequest.submitServiceRequest();
+
+    if (response) {
+      await activeRequest.refreshActiveRequest(false);
+    }
+
+    return response;
+  }, [serviceRequest, activeRequest]);
 
   // === RENDER CONTENT ===
   /**
@@ -218,8 +230,16 @@ const CustomerHome = () => {
               onDescriptionChange: serviceRequest?.setServiceDescription || (() => {}),
               onAddPhoto: serviceRequest?.addPhoto || (() => {}),
               onRemovePhoto: serviceRequest?.removePhoto || (() => {}),
-              onSubmit: serviceRequest?.submitServiceRequest || (() => {}),
+              onSubmit: handleSubmitServiceRequest,
               onRetryServices: serviceRequest?.retryServiceOptions || (() => {})
+            }}
+            activeRequest={{
+              request: activeRequest?.activeRequest || null,
+              isLoading: activeRequest?.isLoading || false,
+              onRefresh: activeRequest?.refreshActiveRequest || (() => {}),
+              onCancel: activeRequest?.cancelRequest || (() => {}),
+              onAcceptPrice: activeRequest?.acceptPrice || (() => {}),
+              onDeclinePrice: activeRequest?.declinePrice || (() => {})
             }}
             // Bottom sheet controls
             bottomSheet={{
@@ -275,8 +295,14 @@ const CustomerHome = () => {
     serviceRequest?.setServiceDescription,
     serviceRequest?.addPhoto,
     serviceRequest?.removePhoto,
-    serviceRequest?.submitServiceRequest,
     serviceRequest?.retryServiceOptions,
+    activeRequest?.activeRequest,
+    activeRequest?.isLoading,
+    activeRequest?.refreshActiveRequest,
+    activeRequest?.cancelRequest,
+    activeRequest?.acceptPrice,
+    activeRequest?.declinePrice,
+    handleSubmitServiceRequest,
     bottomSheet?.bottomSheetRef,
     bottomSheet?.bottomSheetState,
     bottomSheet?.handleDragStart,

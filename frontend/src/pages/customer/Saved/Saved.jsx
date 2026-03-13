@@ -37,9 +37,8 @@ const Saved = () => {
   };
 
   const handleNavigate = (location) => {
-    // In production: Open maps app with location
-    console.log('Navigate to:', location);
-    alert(`Opening maps to: ${location}`);
+    const encodedLocation = encodeURIComponent(location);
+    window.open(`https://www.google.com/maps/search/?api=1&query=${encodedLocation}`, '_blank');
   };
 
   const formatSavedDate = (dateString) => {

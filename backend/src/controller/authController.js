@@ -77,9 +77,13 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: "Invalid phone or password" });
     }
 
-    const token = jwt.sign({ id: user.id, usertype: user.usertype }, JWT_SECRET, {
-      expiresIn: JWT_EXPIRE,
-    });
+    const token = jwt.sign(
+      { id: user.id, usertype: user.usertype },
+      JWT_SECRET,
+      {
+        expiresIn: JWT_EXPIRE,
+      },
+    );
     const header = JSON.parse(
       Buffer.from(token.split(".")[0], "base64").toString(),
     );
@@ -123,6 +127,7 @@ export const getProfileById = async (req, res) => {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
+        id: true,
         name: true,
         phone: true,
         usertype: true,
@@ -150,6 +155,62 @@ export const getProfileById = async (req, res) => {
     }
 
     res.status(200).json({ message: "Profile fetched successfully", profile });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ============================
+// PROFILE: Update user profile
+// ============================
+export const updateProfileById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = Number(id);
+
+    // Ensure user can only update their own profile
+    if (req.user.id !== userId) {
+      return res.status(403).json({ message: "Not allowed" });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const { name, phone, working_hours, mechanic_lat, mechanic_lng } = req.body;
+
+    // Build update data based on what's provided
+    const updateData = {};
+    if (name !== undefined) updateData.name = name;
+    if (phone !== undefined) updateData.phone = phone;
+
+    if (user.usertype === "mechanic") {
+      if (working_hours !== undefined) updateData.working_hours = working_hours;
+      if (mechanic_lat !== undefined) updateData.mechanic_lat = mechanic_lat;
+      if (mechanic_lng !== undefined) updateData.mechanic_lng = mechanic_lng;
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+    });
+
+    const profile = {
+      id: updatedUser.id,
+      name: updatedUser.name,
+      phone: updatedUser.phone,
+      usertype: updatedUser.usertype,
+    };
+
+    if (updatedUser.usertype === "mechanic") {
+      profile.location = {
+        lat: updatedUser.mechanic_lat ?? null,
+        lng: updatedUser.mechanic_lng ?? null,
+      };
+      profile.working_hours = updatedUser.working_hours ?? null;
+    }
+
+    res.status(200).json({ message: "Profile updated successfully", profile });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });

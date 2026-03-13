@@ -29,19 +29,24 @@ export const useMechanicStats = () => {
     setIsLoading(true);
 
     try {
-      // Fetch all service requests to calculate stats
-      const requests = await serviceRequestsService.getIncomingRequests();
+      // Fetch history (completed/cancelled) and active requests for stats
+      const [historyRequests, activeRequests] = await Promise.all([
+        serviceRequestsService.getMechanicHistory(),
+        serviceRequestsService.getActiveRequests(),
+      ]);
 
-      // Calculate stats from requests
-      const totalJobs = requests.length;
-      const completedJobs = requests.filter(
-        (req) => req.status === "completed"
-      ).length;
-      const cancelledJobs = requests.filter(
-        (req) => req.status === "cancelled"
-      ).length;
+      const allRequests = [...historyRequests, ...activeRequests];
 
-      const totalEarnings = requests
+      // Calculate stats from completed and cancelled requests only
+      const completedJobs = allRequests.filter(
+        (req) => req.status === "completed",
+      ).length;
+      const cancelledJobs = allRequests.filter(
+        (req) => req.status === "cancelled",
+      ).length;
+      const totalJobs = completedJobs + cancelledJobs;
+
+      const totalEarnings = allRequests
         .filter((req) => req.status === "completed")
         .reduce((sum, req) => sum + (req.total_price || 0), 0);
 

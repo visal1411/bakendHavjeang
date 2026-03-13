@@ -102,6 +102,7 @@ const History = () => {
       case 'accepted':
         return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'in-progress':
+      case 'proposed':
         return 'bg-purple-100 text-purple-700 border-purple-200';
       case 'cancelled':
         return 'bg-red-100 text-red-700 border-red-200';

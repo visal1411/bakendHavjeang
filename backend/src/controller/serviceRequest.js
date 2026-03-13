@@ -1,7 +1,15 @@
 // src/controller/serviceRequest.js
 import { prisma } from "../config/db.js";
-import { calculateTripPrice, calculateTotalPrice, calculateUnknownTotal } from "../service/pricingService.js";
-import { notifyMechanic, notifyCustomer, isUserOnline } from "../service/socketService.js";
+import {
+  calculateTripPrice,
+  calculateTotalPrice,
+  calculateUnknownTotal,
+} from "../service/pricingService.js";
+import {
+  notifyMechanic,
+  notifyCustomer,
+  isUserOnline,
+} from "../service/socketService.js";
 import { sendPushToUser } from "../service/pushService.js";
 import { getDistanceKmORS } from "../service/distance/orsDistance.js";
 
@@ -10,8 +18,8 @@ const getMechanicLocation = async (mechanicId) => {
     where: { id: mechanicId },
     select: {
       mechanic_lat: true,
-      mechanic_lng: true
-    }
+      mechanic_lng: true,
+    },
   });
 
   const lat = Number(mechanic?.mechanic_lat);
@@ -43,16 +51,22 @@ const enrichRequestsWithDistance = async (requests, mechanicId) => {
       const customerLocation = { lat: requestLat, lng: requestLng };
 
       try {
-        const distanceKm = await getDistanceKmORS(customerLocation, mechanicLocation);
+        const distanceKm = await getDistanceKmORS(
+          customerLocation,
+          mechanicLocation,
+        );
         return {
           ...request,
-          distance: Number(distanceKm.toFixed(2))
+          distance: Number(distanceKm.toFixed(2)),
         };
       } catch (error) {
-        console.error(`Distance calculation failed for request ${request.id}:`, error.message);
+        console.error(
+          `Distance calculation failed for request ${request.id}:`,
+          error.message,
+        );
         return { ...request, distance: null };
       }
-    })
+    }),
   );
 };
 
@@ -62,7 +76,14 @@ const enrichRequestsWithDistance = async (requests, mechanicId) => {
 export const createServiceRequest = async (req, res) => {
   try {
     const customerId = req.user.id;
-    const { serviceIds, mechanicId, description, address, request_lat, request_lng } = req.body;
+    const {
+      serviceIds,
+      mechanicId,
+      description,
+      address,
+      request_lat,
+      request_lng,
+    } = req.body;
 
     if (!address || request_lat == null || request_lng == null) {
       return res.status(400).json({ message: "Missing required fields" });
@@ -76,7 +97,7 @@ export const createServiceRequest = async (req, res) => {
     if (Array.isArray(serviceIds) && serviceIds.length) {
       services = await prisma.service.findMany({
         where: { id: { in: serviceIds } },
-        include: { mechanic: true }
+        include: { mechanic: true },
       });
 
       if (!services.length)
@@ -105,7 +126,7 @@ export const createServiceRequest = async (req, res) => {
     try {
       const priceResult = await calculateTripPrice(customerLocation, {
         lat: mechanic.mechanic_lat,
-        lng: mechanic.mechanic_lng
+        lng: mechanic.mechanic_lng,
       });
       tripDistanceKm = priceResult.tripDistanceKm;
       tripPrice = priceResult.tripPrice;
@@ -113,7 +134,7 @@ export const createServiceRequest = async (req, res) => {
       console.error("Price calculation failed:", error.message);
       return res.status(500).json({
         message: "Could not calculate trip price. Please try again.",
-        error: error.message
+        error: error.message,
       });
     }
 
@@ -126,7 +147,7 @@ export const createServiceRequest = async (req, res) => {
       mechanicLng: mechanic.mechanic_lng,
       tripDistanceKm,
       tripPrice,
-      isTripPriceNaN: Number.isNaN(tripPrice)
+      isTripPriceNaN: Number.isNaN(tripPrice),
     });
 
     const request = await prisma.serviceRequest.create({
@@ -141,8 +162,8 @@ export const createServiceRequest = async (req, res) => {
         total_price: totalPrice,
         status: "pending",
         service: services.length
-          ? { connect: serviceIds.map(id => ({ id })) }
-          : undefined
+          ? { connect: serviceIds.map((id) => ({ id })) }
+          : undefined,
       },
       include: {
         service: true,
@@ -150,14 +171,14 @@ export const createServiceRequest = async (req, res) => {
           select: {
             id: true,
             name: true,
-            phone: true
-          }
-        }
-      }
+            phone: true,
+          },
+        },
+      },
     });
 
     const notificationPayload = {
-      message: 'You have a new service request',
+      message: "You have a new service request",
       request: {
         id: request.id,
         customer: request.customer,
@@ -169,22 +190,22 @@ export const createServiceRequest = async (req, res) => {
         total_price: request.total_price,
         status: request.status,
         service: request.service,
-        request_date: request.request_date
-      }
+        request_date: request.request_date,
+      },
     };
 
     // Notify mechanic: WebSocket if online, otherwise Web Push
     if (isUserOnline(mechanic.id)) {
-      notifyMechanic(mechanic.id, 'new_service_request', notificationPayload);
+      notifyMechanic(mechanic.id, "new_service_request", notificationPayload);
     } else {
       await sendPushToUser(mechanic.id, {
-        type: 'new_service_request',
-        title: 'New service request',
+        type: "new_service_request",
+        title: "New service request",
         body: `You have a new service request from ${request.customer.name}`,
         data: {
           requestId: request.id,
-          customerId: request.customer.id
-        }
+          customerId: request.customer.id,
+        },
       });
     }
 
@@ -203,38 +224,48 @@ export const acceptProposedPrice = async (req, res) => {
     const customerId = req.user.id;
     const requestId = Number(req.params.id);
 
-    const request = await prisma.serviceRequest.findUnique({ where: { id: requestId } });
+    const request = await prisma.serviceRequest.findUnique({
+      where: { id: requestId },
+    });
     if (!request || request.customerId !== customerId)
       return res.status(403).json({ message: "Not allowed" });
-    if (!request.proposed_price) return res.status(400).json({ message: "No price proposed yet" });
+    if (!request.proposed_price)
+      return res.status(400).json({ message: "No price proposed yet" });
 
-    const totalPrice = calculateUnknownTotal(request.trip_price, request.proposed_price);
+    const totalPrice = calculateUnknownTotal(
+      request.trip_price,
+      request.proposed_price,
+    );
 
     const updated = await prisma.serviceRequest.update({
       where: { id: requestId },
-      data: { customerApproved: true, total_price: totalPrice, status: "accepted" }
+      data: {
+        customerApproved: true,
+        total_price: totalPrice,
+        status: "accepted",
+      },
     });
 
     // Notify mechanic: WebSocket if online, otherwise Web Push
     if (request.mechanicId) {
       if (isUserOnline(request.mechanicId)) {
-        notifyMechanic(request.mechanicId, 'price_accepted', {
-          message: 'Customer accepted your proposed price',
+        notifyMechanic(request.mechanicId, "price_accepted", {
+          message: "Customer accepted your proposed price",
           request: {
             id: updated.id,
             status: updated.status,
-            total_price: updated.total_price
-          }
+            total_price: updated.total_price,
+          },
         });
       } else {
         await sendPushToUser(request.mechanicId, {
-          type: 'price_accepted',
-          title: 'Price accepted',
-          body: 'The customer accepted your proposed price.',
+          type: "price_accepted",
+          title: "Price accepted",
+          body: "The customer accepted your proposed price.",
           data: {
             requestId: updated.id,
-            customerId
-          }
+            customerId,
+          },
         });
       }
     }
@@ -253,34 +284,36 @@ export const declineProposedPrice = async (req, res) => {
   try {
     const customerId = req.user.id;
     const requestId = Number(req.params.id);
-    const request = await prisma.serviceRequest.findUnique({ where: { id: requestId } });
+    const request = await prisma.serviceRequest.findUnique({
+      where: { id: requestId },
+    });
     if (!request || request.customerId !== customerId)
       return res.status(403).json({ message: "Not allowed" });
 
     const updated = await prisma.serviceRequest.update({
       where: { id: requestId },
-      data: { customerApproved: false, status: "cancelled" }
+      data: { customerApproved: false, status: "cancelled" },
     });
 
     // Notify mechanic: WebSocket if online, otherwise Web Push
     if (request.mechanicId) {
       if (isUserOnline(request.mechanicId)) {
-        notifyMechanic(request.mechanicId, 'price_declined', {
-          message: 'Customer declined your proposed price',
+        notifyMechanic(request.mechanicId, "price_declined", {
+          message: "Customer declined your proposed price",
           request: {
             id: updated.id,
-            status: updated.status
-          }
+            status: updated.status,
+          },
         });
       } else {
         await sendPushToUser(request.mechanicId, {
-          type: 'price_declined',
-          title: 'Price declined',
-          body: 'The customer declined your proposed price.',
+          type: "price_declined",
+          title: "Price declined",
+          body: "The customer declined your proposed price.",
           data: {
             requestId: updated.id,
-            customerId
-          }
+            customerId,
+          },
         });
       }
     }
@@ -319,7 +352,6 @@ export const declineProposedPrice = async (req, res) => {
 //   }
 // };
 
-
 // ============================
 // CUSTOMER: Get mechanic info
 // ============================
@@ -335,15 +367,17 @@ export const getMechanicById = async (req, res) => {
         usertype: true,
         mechanic_lat: true,
         mechanic_lng: true,
-        working_hours: true
-      }
+        working_hours: true,
+      },
     });
 
     if (!mechanic || mechanic.usertype !== "mechanic") {
       return res.status(404).json({ message: "Mechanic not found" });
     }
 
-    res.status(200).json({ message: "Mechanic fetched successfully", mechanic });
+    res
+      .status(200)
+      .json({ message: "Mechanic fetched successfully", mechanic });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
@@ -374,11 +408,13 @@ export const getRequestTotal = async (req, res) => {
 
     const request = await prisma.serviceRequest.findUnique({
       where: { id: requestId },
-      include: { service: true }
+      include: { service: true },
     });
 
-    if (!request) return res.status(404).json({ message: "Service request not found" });
-    if (request.customerId !== customerId) return res.status(403).json({ message: "Not allowed" });
+    if (!request)
+      return res.status(404).json({ message: "Service request not found" });
+    if (request.customerId !== customerId)
+      return res.status(403).json({ message: "Not allowed" });
 
     const trip_price = request.trip_price ?? 0;
     const proposed_price = request.proposed_price ?? null;
@@ -391,7 +427,7 @@ export const getRequestTotal = async (req, res) => {
       trip_price,
       proposed_price,
       services_sum,
-      total_price
+      total_price,
     });
   } catch (err) {
     console.error(err);
@@ -415,31 +451,33 @@ export const getMechanicHistory = async (req, res) => {
               // Known services: requests with services from this mechanic
               { service: { some: { mechanicId } } },
               // Unknown/accepted services: mechanicId is set to this mechanic
-              { mechanicId }
-            ]
-          }
-        ]
+              { mechanicId },
+            ],
+          },
+        ],
       },
       include: {
         customer: {
           select: {
             id: true,
             name: true,
-            phone: true
-          }
+            phone: true,
+          },
         },
         service: true,
         mechanic: {
           select: {
             id: true,
-            name: true
-          }
-        }
+            name: true,
+          },
+        },
       },
-      orderBy: { request_date: "desc" }
+      orderBy: { request_date: "desc" },
     });
 
-    console.log(`Mechanic ${mechanicId} history: found ${history.length} requests`);
+    console.log(
+      `Mechanic ${mechanicId} history: found ${history.length} requests`,
+    );
     res.json(history);
   } catch (err) {
     console.error("Error fetching mechanic history:", err);
@@ -463,11 +501,11 @@ export const getMyRequests = async (req, res) => {
             name: true,
             phone: true,
             mechanic_lat: true,
-            mechanic_lng: true
-          }
-        }
+            mechanic_lng: true,
+          },
+        },
       },
-      orderBy: { request_date: "desc" }
+      orderBy: { request_date: "desc" },
     });
     res.json(requests);
   } catch (err) {
@@ -484,56 +522,68 @@ export const cancelServiceRequest = async (req, res) => {
     const customerId = req.user.id;
     const requestId = Number(req.params.id);
 
-    const request = await prisma.serviceRequest.findUnique({ where: { id: requestId } });
-    if (!request) return res.status(404).json({ message: "Service request not found" });
-    if (request.customerId !== customerId) return res.status(403).json({ message: "Not allowed" });
+    const request = await prisma.serviceRequest.findUnique({
+      where: { id: requestId },
+    });
+    if (!request)
+      return res.status(404).json({ message: "Service request not found" });
+    if (request.customerId !== customerId)
+      return res.status(403).json({ message: "Not allowed" });
     if (!["pending", "accepted", "proposed"].includes(request.status)) {
-      return res.status(400).json({ message: "Cannot cancel completed or already cancelled requests" });
+      return res
+        .status(400)
+        .json({
+          message: "Cannot cancel completed or already cancelled requests",
+        });
     }
 
     const updatedRequest = await prisma.serviceRequest.update({
       where: { id: requestId },
-      data: { status: "cancelled" }
+      data: { status: "cancelled" },
     });
 
     // Notify mechanic: WebSocket if online, otherwise Web Push
     if (request.mechanicId) {
       const payload = {
-        message: 'Customer cancelled the service request',
+        message: "Customer cancelled the service request",
         request: {
           id: updatedRequest.id,
-          status: updatedRequest.status
-        }
+          status: updatedRequest.status,
+        },
       };
 
       if (isUserOnline(request.mechanicId)) {
-        notifyMechanic(request.mechanicId, 'request_cancelled', payload);
+        notifyMechanic(request.mechanicId, "request_cancelled", payload);
       } else {
         await sendPushToUser(request.mechanicId, {
-          type: 'request_cancelled',
-          title: 'Request cancelled',
-          body: 'The customer cancelled the service request.',
+          type: "request_cancelled",
+          title: "Request cancelled",
+          body: "The customer cancelled the service request.",
           data: {
             requestId: updatedRequest.id,
-            customerId
-          }
+            customerId,
+          },
         });
       }
     }
 
-    res.json({ message: "Service request cancelled successfully", request: updatedRequest });
+    res.json({
+      message: "Service request cancelled successfully",
+      request: updatedRequest,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
   }
-};// ============================
+}; // ============================
 // CUSTOMER: Get nearby mechanics
 // ============================
 export const getNearbyMechanics = async (req, res) => {
   try {
     const { lat, lng } = req.query;
     console.log("🔍 getNearbyMechanics called with:", { lat, lng });
-    if (!lat || !lng) return res.status(400).json({ message: "Location required" });
+    if (!lat || !lng)
+      return res.status(400).json({ message: "Location required" });
 
     const customerLocation = { lat: Number(lat), lng: Number(lng) };
 
@@ -542,7 +592,7 @@ export const getNearbyMechanics = async (req, res) => {
       where: {
         usertype: "mechanic",
         mechanic_lat: { not: null },
-        mechanic_lng: { not: null }
+        mechanic_lng: { not: null },
       },
       select: {
         id: true,
@@ -556,13 +606,15 @@ export const getNearbyMechanics = async (req, res) => {
             id: true,
             name: true,
             price: true,
-            serviceType: true
-          }
-        }
-      }
+            serviceType: true,
+          },
+        },
+      },
     });
 
-    console.log(`Found ${mechanics.length} mechanics, calculating distances...`);
+    console.log(
+      `Found ${mechanics.length} mechanics, calculating distances...`,
+    );
 
     // Calculate ORS distance for each mechanic
     const mechanicsWithDistance = await Promise.all(
@@ -570,7 +622,7 @@ export const getNearbyMechanics = async (req, res) => {
         try {
           const mechanicLocation = {
             lat: mechanic.mechanic_lat,
-            lng: mechanic.mechanic_lng
+            lng: mechanic.mechanic_lng,
           };
 
           // Check if same location (avoid ORS API call)
@@ -582,34 +634,42 @@ export const getNearbyMechanics = async (req, res) => {
           let tripPrice;
 
           if (isSameLocation) {
-            console.log(`Same location detected for mechanic ${mechanic.id}, returning 0km`);
+            console.log(
+              `Same location detected for mechanic ${mechanic.id}, returning 0km`,
+            );
             distance = 0;
             tripPrice = 0;
           } else {
             console.log(`Calling ORS for mechanic ${mechanic.id}`);
-            const { tripDistanceKm, tripPrice: calculatedTripPrice } = await calculateTripPrice(customerLocation, mechanicLocation);
+            const { tripDistanceKm, tripPrice: calculatedTripPrice } =
+              await calculateTripPrice(customerLocation, mechanicLocation);
             distance = tripDistanceKm;
             tripPrice = calculatedTripPrice;
-            console.log(`ORS returned ${distance}km (${tripPrice} fee) for mechanic ${mechanic.id}`);
+            console.log(
+              `ORS returned ${distance}km (${tripPrice} fee) for mechanic ${mechanic.id}`,
+            );
           }
 
           return {
             ...mechanic,
             distance: distance < 0.01 ? 0 : Math.round(distance * 100) / 100,
             trip_price: tripPrice,
-            services: mechanic.service.map(s => s.serviceType)
+            services: mechanic.service,
           };
         } catch (error) {
-          console.error(`Failed to calculate distance for mechanic ${mechanic.id}:`, error.message);
+          console.error(
+            `Failed to calculate distance for mechanic ${mechanic.id}:`,
+            error.message,
+          );
           // Fallback: return mechanic without distance/price
           return {
             ...mechanic,
             distance: null,
             trip_price: null,
-            services: mechanic.service.map(s => s.serviceType)
+            services: mechanic.service,
           };
         }
-      })
+      }),
     );
 
     // Sort by distance (closest first), mechanics without distance go last
@@ -636,14 +696,17 @@ export const getIncomingRequests = async (req, res) => {
       where: {
         OR: [
           { service: { some: { mechanicId } } },
-          { service: { none: {} }, OR: [{ mechanicId }, { mechanicId: null }] }
+          { service: { none: {} }, OR: [{ mechanicId }, { mechanicId: null }] },
         ],
-        status: "pending"
+        status: "pending",
       },
       include: { customer: true, service: true },
-      orderBy: { request_date: "asc" }
+      orderBy: { request_date: "asc" },
     });
-    const requestsWithDistance = await enrichRequestsWithDistance(requests, mechanicId);
+    const requestsWithDistance = await enrichRequestsWithDistance(
+      requests,
+      mechanicId,
+    );
     res.json(requestsWithDistance);
   } catch (err) {
     console.error(err);
@@ -665,22 +728,30 @@ export const getActiveRequests = async (req, res) => {
           // Unknown services (not accepted yet): pending requests with no services
           { service: { none: {} }, mechanicId: null },
           // Accepted unknown services OR any accepted requests: mechanicId is set
-          { mechanicId }
+          { mechanicId },
         ],
-        status: { in: ["pending", "proposed", "accepted"] }
+        status: { in: ["pending", "proposed", "accepted"] },
       },
       include: {
         customer: true,
-        service: true
+        service: true,
       },
-      orderBy: { request_date: "asc" }
+      orderBy: { request_date: "asc" },
     });
 
-    const requestsWithDistance = await enrichRequestsWithDistance(requests, mechanicId);
+    const requestsWithDistance = await enrichRequestsWithDistance(
+      requests,
+      mechanicId,
+    );
 
-    console.log("getActiveRequests - Total requests:", requestsWithDistance.length);
+    console.log(
+      "getActiveRequests - Total requests:",
+      requestsWithDistance.length,
+    );
     requestsWithDistance.forEach((request, idx) => {
-      console.log(`Request ${idx}: id=${request.id}, status=${request.status}, services=${request.service.length}, distance=${request.distance}, serviceNames=[${request.service.map(s => s.name).join(",")}]`);
+      console.log(
+        `Request ${idx}: id=${request.id}, status=${request.status}, services=${request.service.length}, distance=${request.distance}, serviceNames=[${request.service.map((s) => s.name).join(",")}]`,
+      );
     });
 
     res.json(requestsWithDistance);
@@ -700,20 +771,28 @@ export const acceptServiceRequest = async (req, res) => {
 
     const request = await prisma.serviceRequest.findUnique({
       where: { id: requestId },
-      include: { service: true }
+      include: { service: true },
     });
 
     if (!request) return res.status(404).json({ message: "Request not found" });
-    if (request.status !== "pending") return res.status(400).json({ message: "Only pending requests can be accepted" });
+    if (request.status !== "pending")
+      return res
+        .status(400)
+        .json({ message: "Only pending requests can be accepted" });
 
-    const canAccept = !request.service.length || request.service.some(s => s.mechanicId === mechanicId);
-    if (!canAccept) return res.status(403).json({ message: "You are not allowed to accept this request" });
+    const canAccept =
+      !request.service.length ||
+      request.service.some((s) => s.mechanicId === mechanicId);
+    if (!canAccept)
+      return res
+        .status(403)
+        .json({ message: "You are not allowed to accept this request" });
 
     const updatedRequest = await prisma.serviceRequest.update({
       where: { id: requestId },
       data: {
         status: "accepted",
-        mechanicId: mechanicId // Set the mechanic who accepted this request
+        mechanicId: mechanicId, // Set the mechanic who accepted this request
       },
       include: {
         service: true,
@@ -721,34 +800,38 @@ export const acceptServiceRequest = async (req, res) => {
           select: {
             id: true,
             name: true,
-            phone: true
-          }
-        }
-      }
+            phone: true,
+          },
+        },
+      },
     });
 
     const notificationPayload = {
-      message: 'Your service request has been accepted by the mechanic',
+      message: "Your service request has been accepted by the mechanic",
       request: {
         id: updatedRequest.id,
         status: updatedRequest.status,
         mechanic: updatedRequest.mechanic,
-        service: updatedRequest.service
-      }
+        service: updatedRequest.service,
+      },
     };
 
     // Notify customer: WebSocket if online, otherwise Web Push
     if (isUserOnline(request.customerId)) {
-      notifyCustomer(request.customerId, 'request_accepted', notificationPayload);
+      notifyCustomer(
+        request.customerId,
+        "request_accepted",
+        notificationPayload,
+      );
     } else {
       await sendPushToUser(request.customerId, {
-        type: 'request_accepted',
-        title: 'Request accepted',
-        body: 'Your service request has been accepted by the mechanic.',
+        type: "request_accepted",
+        title: "Request accepted",
+        body: "Your service request has been accepted by the mechanic.",
         data: {
           requestId: updatedRequest.id,
-          mechanicId
-        }
+          mechanicId,
+        },
       });
     }
 
@@ -769,20 +852,28 @@ export const rejectServiceRequest = async (req, res) => {
 
     const request = await prisma.serviceRequest.findUnique({
       where: { id: requestId },
-      include: { service: true }
+      include: { service: true },
     });
 
     if (!request) return res.status(404).json({ message: "Request not found" });
-    if (request.status !== "pending") return res.status(400).json({ message: "Only pending requests can be rejected" });
+    if (request.status !== "pending")
+      return res
+        .status(400)
+        .json({ message: "Only pending requests can be rejected" });
 
-    const canReject = !request.service.length || request.service.some(s => s.mechanicId === mechanicId);
-    if (!canReject) return res.status(403).json({ message: "You are not allowed to reject this request" });
+    const canReject =
+      !request.service.length ||
+      request.service.some((s) => s.mechanicId === mechanicId);
+    if (!canReject)
+      return res
+        .status(403)
+        .json({ message: "You are not allowed to reject this request" });
 
     const updatedRequest = await prisma.serviceRequest.update({
       where: { id: requestId },
       data: {
         status: "cancelled",
-        mechanicId: mechanicId // Set mechanic who rejected it for history tracking
+        mechanicId: mechanicId, // Set mechanic who rejected it for history tracking
       },
       include: {
         service: true,
@@ -790,34 +881,38 @@ export const rejectServiceRequest = async (req, res) => {
           select: {
             id: true,
             name: true,
-            phone: true
-          }
-        }
-      }
+            phone: true,
+          },
+        },
+      },
     });
 
     const notificationPayload = {
-      message: 'Your service request has been rejected by the mechanic',
+      message: "Your service request has been rejected by the mechanic",
       request: {
         id: updatedRequest.id,
         status: updatedRequest.status,
         mechanic: updatedRequest.mechanic,
-        service: updatedRequest.service
-      }
+        service: updatedRequest.service,
+      },
     };
 
     // Notify customer: WebSocket if online, otherwise Web Push
     if (isUserOnline(request.customerId)) {
-      notifyCustomer(request.customerId, 'request_rejected', notificationPayload);
+      notifyCustomer(
+        request.customerId,
+        "request_rejected",
+        notificationPayload,
+      );
     } else {
       await sendPushToUser(request.customerId, {
-        type: 'request_rejected',
-        title: 'Request rejected',
-        body: 'Your service request has been rejected by the mechanic.',
+        type: "request_rejected",
+        title: "Request rejected",
+        body: "Your service request has been rejected by the mechanic.",
         data: {
           requestId: updatedRequest.id,
-          mechanicId
-        }
+          mechanicId,
+        },
       });
     }
 
@@ -838,38 +933,46 @@ export const completeServiceRequest = async (req, res) => {
 
     const request = await prisma.serviceRequest.findUnique({
       where: { id: requestId },
-      include: { service: true }
+      include: { service: true },
     });
 
     if (!request) return res.status(404).json({ message: "Request not found" });
-    if (request.status !== "accepted") return res.status(400).json({ message: "Only accepted requests can be completed" });
+    if (request.status !== "accepted")
+      return res
+        .status(400)
+        .json({ message: "Only accepted requests can be completed" });
 
-    const isAllowed = !request.service.length || request.service.some(s => s.mechanicId === mechanicId);
-    if (!isAllowed) return res.status(403).json({ message: "You are not allowed to complete this request" });
+    const isAllowed =
+      !request.service.length ||
+      request.service.some((s) => s.mechanicId === mechanicId);
+    if (!isAllowed)
+      return res
+        .status(403)
+        .json({ message: "You are not allowed to complete this request" });
 
     const updatedRequest = await prisma.serviceRequest.update({
       where: { id: requestId },
-      data: { status: "completed" }
+      data: { status: "completed" },
     });
 
     // Notify customer that request is completed
     if (isUserOnline(request.customerId)) {
-      notifyCustomer(request.customerId, 'request_completed', {
-        message: 'Your service request has been completed',
+      notifyCustomer(request.customerId, "request_completed", {
+        message: "Your service request has been completed",
         request: {
           id: updatedRequest.id,
-          status: updatedRequest.status
-        }
+          status: updatedRequest.status,
+        },
       });
     } else {
       await sendPushToUser(request.customerId, {
-        type: 'request_completed',
-        title: 'Request completed',
-        body: 'Your service request has been completed.',
+        type: "request_completed",
+        title: "Request completed",
+        body: "Your service request has been completed.",
         data: {
           requestId: updatedRequest.id,
-          mechanicId
-        }
+          mechanicId,
+        },
       });
     }
 
@@ -895,44 +998,57 @@ export const proposeServicePrice = async (req, res) => {
 
     const request = await prisma.serviceRequest.findUnique({
       where: { id: requestId },
-      include: { service: true }
+      include: { service: true },
     });
     if (!request) return res.status(404).json({ message: "Request not found" });
-    if (request.status !== "accepted") return res.status(400).json({ message: "Price can only be proposed for accepted requests" });
+    if (request.status !== "accepted")
+      return res
+        .status(400)
+        .json({ message: "Price can only be proposed for accepted requests" });
 
-    const canPropose = !request.service.length || request.service.some(s => s.mechanicId === mechanicId);
-    if (!canPropose) return res.status(403).json({ message: "You are not allowed to propose price for this request" });
+    const canPropose =
+      !request.service.length ||
+      request.service.some((s) => s.mechanicId === mechanicId);
+    if (!canPropose)
+      return res
+        .status(403)
+        .json({
+          message: "You are not allowed to propose price for this request",
+        });
 
     const updatedRequest = await prisma.serviceRequest.update({
       where: { id: requestId },
-      data: { proposed_price, customerApproved: null, status: "proposed" }
+      data: { proposed_price, customerApproved: null, status: "proposed" },
     });
 
     // Notify customer: WebSocket if online, otherwise Web Push
     const pricePayload = {
-      message: 'Mechanic proposed a new price',
+      message: "Mechanic proposed a new price",
       request: {
         id: updatedRequest.id,
         proposed_price: updatedRequest.proposed_price,
-        status: updatedRequest.status
-      }
+        status: updatedRequest.status,
+      },
     };
 
     if (isUserOnline(request.customerId)) {
-      notifyCustomer(request.customerId, 'price_proposed', pricePayload);
+      notifyCustomer(request.customerId, "price_proposed", pricePayload);
     } else {
       await sendPushToUser(request.customerId, {
-        type: 'price_proposed',
-        title: 'New price proposed',
-        body: 'Your mechanic has proposed a new price for your service request.',
+        type: "price_proposed",
+        title: "New price proposed",
+        body: "Your mechanic has proposed a new price for your service request.",
         data: {
           requestId: updatedRequest.id,
-          mechanicId
-        }
+          mechanicId,
+        },
       });
     }
 
-    res.json({ message: "Price proposed successfully", request: updatedRequest });
+    res.json({
+      message: "Price proposed successfully",
+      request: updatedRequest,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });

@@ -1,4 +1,4 @@
-import { prisma } from "../config/db.js"
+import { prisma } from "../config/db.js";
 
 //
 // ============================
@@ -6,11 +6,11 @@ import { prisma } from "../config/db.js"
 // ============================
 export const createService = async (req, res) => {
   try {
-    const mechanicId = req.user.id
-    const { name, price, serviceType } = req.body
+    const mechanicId = req.user.id;
+    const { name, price, serviceType } = req.body;
 
     if (!name || price === undefined || !serviceType) {
-      return res.status(400).json({ message: "Missing required fields" })
+      return res.status(400).json({ message: "Missing required fields" });
     }
 
     const service = await prisma.service.create({
@@ -18,19 +18,19 @@ export const createService = async (req, res) => {
         name,
         price,
         serviceType,
-        mechanicId
-      }
-    })
+        mechanicId,
+      },
+    });
 
     res.status(201).json({
       message: "Service created successfully",
-      service
-    })
+      service,
+    });
   } catch (error) {
-    console.error(error)
-    res.status(500).json({ message: "Server error" })
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
   }
-}
+};
 
 //
 // ============================
@@ -38,18 +38,18 @@ export const createService = async (req, res) => {
 // ============================
 export const getMyServices = async (req, res) => {
   try {
-    const mechanicId = req.user.id
+    const mechanicId = req.user.id;
 
     const services = await prisma.service.findMany({
-      where: { mechanicId }
-    })
+      where: { mechanicId },
+    });
 
-    res.json(services)
+    res.json(services);
   } catch (error) {
-    console.error(error)
-    res.status(500).json({ message: "Server error" })
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
   }
-}
+};
 
 //
 // ============================
@@ -57,36 +57,44 @@ export const getMyServices = async (req, res) => {
 // ============================
 export const updateService = async (req, res) => {
   try {
-    const mechanicId = req.user.id
-    const serviceId = Number(req.params.id)
-    const { name, price, serviceType } = req.body
+    const mechanicId = req.user.id;
+    const serviceId = Number(req.params.id);
+    const { name, price, serviceType } = req.body;
 
     const service = await prisma.service.findUnique({
-      where: { id: serviceId }
-    })
+      where: { id: serviceId },
+    });
 
     if (!service) {
-      return res.status(404).json({ message: "Service not found" })
+      return res.status(404).json({ message: "Service not found" });
     }
 
     if (service.mechanicId !== mechanicId) {
-      return res.status(403).json({ message: "You cannot update this service" })
+      return res
+        .status(403)
+        .json({ message: "You cannot update this service" });
     }
 
+    const { isActive } = req.body;
     const updatedService = await prisma.service.update({
       where: { id: serviceId },
-      data: { name, price, serviceType }
-    })
+      data: {
+        ...(name !== undefined && { name }),
+        ...(price !== undefined && { price }),
+        ...(serviceType !== undefined && { serviceType }),
+        ...(isActive !== undefined && { isActive }),
+      },
+    });
 
     res.json({
       message: "Service updated successfully",
-      service: updatedService
-    })
+      service: updatedService,
+    });
   } catch (error) {
-    console.error(error)
-    res.status(500).json({ message: "Server error" })
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
   }
-}
+};
 
 //
 // ============================
@@ -94,41 +102,39 @@ export const updateService = async (req, res) => {
 // ============================
 export const deleteService = async (req, res) => {
   try {
-    const mechanicId = req.user.id
-    const serviceId = Number(req.params.id)
+    const mechanicId = req.user.id;
+    const serviceId = Number(req.params.id);
 
     const service = await prisma.service.findUnique({
-      where: { id: serviceId }
-    })
+      where: { id: serviceId },
+    });
 
     if (!service) {
-      return res.status(404).json({ message: "Service not found" })
+      return res.status(404).json({ message: "Service not found" });
     }
 
     if (service.mechanicId !== mechanicId) {
-      return res.status(403).json({ message: "You cannot delete this service" })
+      return res
+        .status(403)
+        .json({ message: "You cannot delete this service" });
     }
 
     await prisma.service.delete({
-      where: { id: serviceId }
-    })
+      where: { id: serviceId },
+    });
 
-    res.json({ message: "Service deleted successfully" })
+    res.json({ message: "Service deleted successfully" });
   } catch (error) {
-    console.error(error)
-    res.status(500).json({ message: "Server error" })
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
   }
-}
+};
 
 //  retrive service's info
-export const getServiceInfo = async (req, res)=>{
+export const getServiceInfo = async (req, res) => {
   try {
-    
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
   }
-  catch (error) {
-    console.error(error)
-    res.status(500).json({ message: "Server error" })
-  }
-}
-
-
+};

@@ -39,16 +39,16 @@ export const AuthProvider = ({ children }) => {
             const userData = JSON.parse(storedUser);
             setUser(userData);
             setIsAuthenticated(true);
-            console.log('✅ Session restored from backend:', userData.usertype);
+
           } catch (error) {
-            console.log('⚠️ Session expired or invalid, clearing auth');
+
             // Token invalid or expired, clear everything
             localStorage.removeItem(AUTH_STORAGE_KEY);
             localStorage.removeItem(USER_STORAGE_KEY);
             localStorage.removeItem(TOKEN_STORAGE_KEY);
           }
         } else {
-          console.log('ℹ️ No active session found');
+
         }
       } catch (error) {
         console.error('❌ Error restoring session:', error);
@@ -78,7 +78,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem(TOKEN_STORAGE_KEY, token);
       }
       
-      console.log('✅ User logged in:', userData.usertype);
+
     } catch (error) {
       console.error('❌ Error saving session:', error);
     }
@@ -97,7 +97,7 @@ export const AuthProvider = ({ children }) => {
       // Also clear from authService
       authService.logout();
       
-      console.log('✅ User logged out');
+
     } catch (error) {
       console.error('❌ Error clearing session:', error);
     }

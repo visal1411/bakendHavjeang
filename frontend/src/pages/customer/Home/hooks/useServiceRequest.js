@@ -45,20 +45,21 @@ export const useServiceRequest = (userLocation) => {
     try {
       setIsServicesLoading(true);
       setServiceLoadError("");
-      const response = await serviceRequestsService.getServicesByMechanic(mechanicId);
+      const response =
+        await serviceRequestsService.getServicesByMechanic(mechanicId);
       const normalized = Array.isArray(response)
         ? response.map((service) => ({
-          id: service.id,
-          name: service.name || service.serviceType || "Custom service",
-          price: Number(service.price ?? 0),
-          serviceType: service.serviceType || "other",
-        }))
+            id: service.id,
+            name: service.name || service.serviceType || "Custom service",
+            price: Number(service.price ?? 0),
+            serviceType: service.serviceType || "other",
+          }))
         : [];
       setServiceOptions(normalized);
     } catch (error) {
       console.error("Failed to load mechanic services:", error);
       setServiceLoadError(
-        error?.response?.data?.message || "Failed to load mechanic services."
+        error?.response?.data?.message || "Failed to load mechanic services.",
       );
       setServiceOptions([]);
     } finally {
@@ -147,36 +148,38 @@ export const useServiceRequest = (userLocation) => {
 
       const mechanicLat = Number(selectedMechanic?.lat);
       const mechanicLng = Number(selectedMechanic?.lng);
-      const fallbackAddress = Number.isFinite(mechanicLat) && Number.isFinite(mechanicLng)
-        ? `${mechanicLat.toFixed(6)}, ${mechanicLng.toFixed(6)}`
-        : "Current Location";
-      const selectedLocation = typeof selectedMechanic?.location === "string"
-        ? selectedMechanic.location.trim()
-        : "";
-      const requestAddress = selectedLocation && selectedLocation.toLowerCase() !== "unknown"
-        ? selectedLocation
-        : fallbackAddress;
+      const fallbackAddress =
+        Number.isFinite(mechanicLat) && Number.isFinite(mechanicLng)
+          ? `${mechanicLat.toFixed(6)}, ${mechanicLng.toFixed(6)}`
+          : "Current Location";
+      const selectedLocation =
+        typeof selectedMechanic?.location === "string"
+          ? selectedMechanic.location.trim()
+          : "";
+      const requestAddress =
+        selectedLocation && selectedLocation.toLowerCase() !== "unknown"
+          ? selectedLocation
+          : fallbackAddress;
 
       const requestData = {
         address: requestAddress,
         request_lat: userLocation[0],
         request_lng: userLocation[1],
-        trip_price: calculatedTripFee,
         description: serviceDescription || null,
-        serviceIds: numericServiceIds.length > 0 ? numericServiceIds : undefined,
+        mechanicId: selectedMechanic?.id || undefined,
+        serviceIds:
+          numericServiceIds.length > 0 ? numericServiceIds : undefined,
       };
 
       // Submit to backend
       const response =
         await serviceRequestsService.createServiceRequest(requestData);
 
-      console.log("Service request created:", response);
-
       alert(
         `Request sent successfully!\n\n` +
-        `Trip Fee: $${calculatedTripFee}\n` +
-        `Photos: ${photos.length}\n\n` +
-        `You'll be notified when a mechanic responds.`,
+          `Trip Fee: $${calculatedTripFee}\n` +
+          `Photos: ${photos.length}\n\n` +
+          `You'll be notified when a mechanic responds.`,
       );
 
       closeServiceRequest();

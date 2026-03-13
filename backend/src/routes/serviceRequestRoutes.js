@@ -7,6 +7,7 @@ import {
   getMyRequests,
   cancelServiceRequest,
   getIncomingRequests,
+  getActiveRequests,
   completeServiceRequest,
   getNearbyMechanics,
   acceptServiceRequest,
@@ -17,7 +18,7 @@ import {
   declineProposedPrice,
   proposeServicePrice,
   getRequestTotal,
-  getMechanicHistory
+  getMechanicHistory,
 } from "../controller/serviceRequest.js";
 
 const router = express.Router();
@@ -67,6 +68,9 @@ mechanicRouter.use(authenticateToken, isMechanic);
 
 // View incoming requests (pending only)
 mechanicRouter.get("/incoming", getIncomingRequests);
+
+// View all active requests (pending, proposed, accepted)
+mechanicRouter.get("/active", getActiveRequests);
 
 // View completed/cancelled history
 mechanicRouter.get("/history", getMechanicHistory);

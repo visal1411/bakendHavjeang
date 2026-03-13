@@ -52,6 +52,18 @@ const servicesService = {
     const response = await apiClient.delete(`/services/${serviceId}`);
     return response.data;
   },
+  /**
+   * Toggle a service's active status (Mechanic only)
+   * @param {number} serviceId - Service ID to toggle
+   * @param {boolean} isActive - New active status
+   * @returns {Promise} Updated service data
+   */
+  toggleService: async (serviceId, isActive) => {
+    const response = await apiClient.put(`/services/${serviceId}`, {
+      isActive,
+    });
+    return response.data;
+  },
 };
 
 export default servicesService;

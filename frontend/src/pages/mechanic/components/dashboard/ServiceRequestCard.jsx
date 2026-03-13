@@ -165,7 +165,7 @@ export const ServiceRequestCard = ({ request, onAccept, onDecline, onViewDetails
               </a>
             </>
           )}
-          {request.status === 'in-progress' && (
+          {request.status === 'proposed' && (
             <>
               <Button
                 onClick={() => onViewDetails(request.id)}
@@ -187,6 +187,16 @@ export const ServiceRequestCard = ({ request, onAccept, onDecline, onViewDetails
               onClick={() => onViewDetails(request.id)}
               variant="outline"
               className="flex-1 h-12 text-base"
+              size="lg"
+            >
+              View Details
+            </Button>
+          )}
+          {request.status === 'cancelled' && (
+            <Button
+              onClick={() => onViewDetails(request.id)}
+              variant="outline"
+              className="flex-1 h-12 text-base text-gray-500"
               size="lg"
             >
               View Details

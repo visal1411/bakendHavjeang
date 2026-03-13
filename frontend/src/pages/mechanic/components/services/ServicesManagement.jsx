@@ -10,7 +10,9 @@ import {
   Sparkles,
   Car,
   Bike,
-  Loader2
+  Loader2,
+  ToggleLeft,
+  ToggleRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,6 +61,7 @@ export const ServicesManagement = () => {
   const [error, setError] = useState("");
   const [formError, setFormError] = useState("");
   const [deletingId, setDeletingId] = useState(null);
+  const [togglingId, setTogglingId] = useState(null);
 
   const fetchServices = useCallback(async () => {
     setLoading(true);
@@ -152,6 +155,19 @@ export const ServicesManagement = () => {
       setError(message);
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleToggleActive = async (service) => {
+    setTogglingId(service.id);
+    try {
+      const { service: updated } = await servicesService.toggleService(service.id, !service.isActive);
+      setServices((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+    } catch (toggleError) {
+      const message = toggleError?.response?.data?.message ?? "Unable to toggle service.";
+      setError(message);
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -409,20 +425,34 @@ export const ServicesManagement = () => {
                   whileHover={{ y: -8, transition: { duration: 0.2 } }}
                   layout
                 >
-                  <Card className="overflow-hidden border-2 border-blue-50 hover:border-blue-200 transition-all shadow-card hover:shadow-xl">
-                    <div className="h-2 bg-gradient-to-r from-blue-600 to-blue-700" />
+                  <Card className={`overflow-hidden border-2 transition-all shadow-card hover:shadow-xl ${service.isActive === false ? 'border-gray-200 opacity-60' : 'border-blue-50 hover:border-blue-200'}`}>
+                    <div className={`h-2 ${service.isActive === false ? 'bg-gradient-to-r from-gray-300 to-gray-400' : 'bg-gradient-to-r from-blue-600 to-blue-700'}`} />
 
                     <CardContent className="p-5">
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            {Icon && <Icon className="w-6 h-6 text-blue-600" />}
+                            {Icon && <Icon className={`w-6 h-6 ${service.isActive === false ? 'text-gray-400' : 'text-blue-600'}`} />}
                             <h3 className="font-bold text-gray-900 text-lg">{service.name}</h3>
                           </div>
                           <Badge className={`${meta.color} font-medium border`}>
                             {meta.label}
                           </Badge>
                         </div>
+                        <button
+                          onClick={() => handleToggleActive(service)}
+                          disabled={togglingId === service.id}
+                          className="p-1 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
+                          title={service.isActive === false ? 'Enable service' : 'Disable service'}
+                        >
+                          {togglingId === service.id ? (
+                            <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                          ) : service.isActive === false ? (
+                            <ToggleLeft className="w-7 h-7 text-gray-400" />
+                          ) : (
+                            <ToggleRight className="w-7 h-7 text-green-500" />
+                          )}
+                        </button>
                       </div>
 
                       <div className="mb-6">
