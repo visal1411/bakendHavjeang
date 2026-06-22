@@ -6,6 +6,27 @@ import { serviceRequestsService } from "@/services";
  *
  * Manages service requests for mechanic dashboard
  */
+const mapRequest = (req) => ({
+  id: req.id,
+  customerName: req.customer?.name || "Unknown Customer",
+  customerPhone: req.customer?.phone || "",
+  serviceType: req.service?.[0]?.serviceType || req.service?.[0]?.name || "Unknown Service",
+  status: req.status,
+  location: req.address,
+  distance: req.distance || 0,
+  description: req.description,
+  requestedAt: req.request_date,
+  tripPriceCents: Number(req.trip_price ?? 0),
+  estimatedTripFee: Number(req.trip_price ?? 0) / 100,
+  totalPrice: req.total_price,
+  proposedPrice: req.proposed_price,
+  customerApproved: req.customerApproved,
+  lat: req.request_lat,
+  lng: req.request_lng,
+  vehicleType: req.vehicle_type || req.vehicleType || "Unknown",
+  vehicleMake: req.vehicle_make || req.vehicleMake || "Unknown",
+});
+
 export const useServiceRequests = () => {
   const [requests, setRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -20,23 +41,7 @@ export const useServiceRequests = () => {
         const response = await serviceRequestsService.getIncomingRequests();
 
         // Transform API response to match expected format
-        const transformedRequests = response.map((req) => ({
-          id: req.id,
-          customer: req.customer?.name || "Unknown",
-          location: req.address,
-          distance: req.distance || 0,
-          service:
-            req.service?.map((s) => s.name).join(", ") || "Unknown Service",
-          status: req.status,
-          tripPrice: req.trip_price,
-          totalPrice: req.total_price,
-          proposedPrice: req.proposed_price,
-          description: req.description,
-          lat: req.request_lat,
-          lng: req.request_lng,
-          createdAt: req.request_date,
-          customerApproved: req.customerApproved,
-        }));
+        const transformedRequests = response.map(mapRequest);
 
         setRequests(transformedRequests);
       } catch (error) {
@@ -153,22 +158,7 @@ export const useServiceRequests = () => {
     setIsLoading(true);
     try {
       const response = await serviceRequestsService.getIncomingRequests();
-      const transformedRequests = response.map((req) => ({
-        id: req.id,
-        customerName: req.customer?.name || "Unknown Customer",
-        customerPhone: req.customer?.phone,
-        serviceType: req.service?.[0]?.serviceType || "unknown",
-        status: req.status,
-        location: req.address,
-        distance: req.distance || 0,
-        description: req.description,
-        requestedAt: req.request_date,
-        tripPrice: req.trip_price,
-        totalPrice: req.total_price,
-        proposedPrice: req.proposed_price,
-        customerApproved: req.customerApproved,
-      }));
-      setRequests(transformedRequests);
+      setRequests(response.map(mapRequest));
     } catch (error) {
       console.error("Failed to refresh requests:", error);
     } finally {

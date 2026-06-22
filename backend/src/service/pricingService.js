@@ -10,8 +10,9 @@ export async function calculateTripPrice(customerLocation, mechanicLocation) {
   if (!mechanicLocation.lat || !mechanicLocation.lng) return { tripDistanceKm: 0, tripPrice: 0 };
 
   const tripDistanceKm = await getDistanceKmORS(customerLocation, mechanicLocation);
-  const rawPrice = Number((tripDistanceKm * PRICE_PER_KM_USD).toFixed(2));
-  const tripPrice = Math.max(MIN_TRIP_FEE_USD, rawPrice);
+  const rawPriceUsd = Number((tripDistanceKm * PRICE_PER_KM_USD).toFixed(2));
+  const normalizedUsd = Math.max(MIN_TRIP_FEE_USD, rawPriceUsd);
+  const tripPrice = Math.round(normalizedUsd * 100); // store as cents for Prisma Int
 
   return { tripDistanceKm: Number(tripDistanceKm.toFixed(2)), tripPrice };
 }

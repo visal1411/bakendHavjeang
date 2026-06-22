@@ -48,10 +48,22 @@ export const createServiceRequest = async (req, res) => {
       return res.status(400).json({ message: "Mechanic is required" });
 
     // PRICE CALCULATION
-    const { tripDistanceKm, tripPrice } = await calculateTripPrice(customerLocation, {
-      lat: mechanic.mechanic_lat,
-      lng: mechanic.mechanic_lng
-    });
+    let tripDistanceKm = 0;
+    let tripPrice = 0;
+
+    try {
+      const pricingResult = await calculateTripPrice(customerLocation, {
+        lat: mechanic.mechanic_lat,
+        lng: mechanic.mechanic_lng
+      });
+      tripDistanceKm = pricingResult.tripDistanceKm;
+      tripPrice = pricingResult.tripPrice;
+    } catch (distanceError) {
+      console.error('Trip price calculation failed', distanceError);
+      return res.status(502).json({
+        message: 'Unable to calculate mechanic travel distance right now. Please try another mechanic or try again later.'
+      });
+    }
 
     let totalPrice = services.length
       ? calculateTotalPrice(tripPrice, services)

@@ -1,6 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Phone, MapPin, Clock, AlertCircle, Check, X, Zap } from 'lucide-react';
+import { Phone, MapPin, Clock, Check, X } from 'lucide-react';
 
 /**
  * ServiceRequestCard Component
@@ -13,28 +13,6 @@ import { Phone, MapPin, Clock, AlertCircle, Check, X, Zap } from 'lucide-react';
  * - Color coding for priority
  */
 export const ServiceRequestCard = ({ request, onAccept, onDecline, onViewDetails }) => {
-  const priorityConfig = {
-    normal: { 
-      bg: 'bg-gray-50', 
-      border: 'border-gray-300', 
-      text: 'text-gray-700',
-      label: 'Normal'
-    },
-    urgent: { 
-      bg: 'bg-orange-50', 
-      border: 'border-orange-400', 
-      text: 'text-orange-700',
-      label: 'Urgent'
-    },
-    emergency: { 
-      bg: 'bg-red-50', 
-      border: 'border-red-500', 
-      text: 'text-red-700',
-      label: 'EMERGENCY'
-    },
-  };
-
-  const config = priorityConfig[request.priority];
 
   const formatTime = (dateString) => {
     const date = new Date(dateString);
@@ -42,18 +20,8 @@ export const ServiceRequestCard = ({ request, onAccept, onDecline, onViewDetails
   };
 
   return (
-    <Card className={`shadow-sm hover:shadow-lg transition-all border-2 ${config.border} ${config.bg}`}>
+    <Card className="shadow-sm hover:shadow-lg transition-all border-2 border-gray-200 bg-white">
       <CardContent className="p-5">
-        {/* Priority Badge - Top and Obvious */}
-        {request.priority !== 'normal' && (
-          <div className={`mb-4 inline-flex items-center gap-2 px-4 py-2 ${config.bg} border-2 ${config.border} rounded-full`}>
-            <AlertCircle className={`w-5 h-5 ${config.text} ${request.priority === 'emergency' ? 'animate-pulse' : ''}`} />
-            <span className={`font-bold ${config.text} text-sm`}>
-              {config.label}
-            </span>
-          </div>
-        )}
-
         {/* Customer Name - Big and Clear */}
         <h3 className="text-xl font-bold text-gray-900 mb-2">{request.customerName}</h3>
         
