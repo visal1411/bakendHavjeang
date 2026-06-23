@@ -1,8 +1,8 @@
 import axios from "axios";
 
-// Base API URL - Uses "/api" prefix so requests go through the Vite dev proxy
-// The Vite proxy in vite.config.js forwards /api/* → http://localhost:8080/api/*
-const API_BASE_URL = "/api";
+// Base API URL - Uses environment variable if available, otherwise falls back to "/api"
+// In development, "/api" requests are forwarded by Vite proxy
+const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
 
 // Create axios instance with default config
